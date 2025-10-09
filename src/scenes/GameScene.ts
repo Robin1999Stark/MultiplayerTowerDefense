@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { Enemy } from '../entities/Enemy'
 import { Tower } from '../entities/Tower'
 import { Boss } from '../entities/Boss'
+import { PathGenerator } from './PathGenerator'
 
 export const GAME_EVENTS = {
 	placeTowerToggle: 'ui.placeTowerToggle',
@@ -60,15 +61,8 @@ export class GameScene extends Phaser.Scene {
 		this.registry.set('lives', this.lives)
 		this.registry.set('wave', this.wave)
 
-		// Build a simple path across the map with a few turns
-		this.pathPoints = [
-			new Phaser.Math.Vector2(0, 80),
-			new Phaser.Math.Vector2(250, 80),
-			new Phaser.Math.Vector2(250, 240),
-			new Phaser.Math.Vector2(600, 240),
-			new Phaser.Math.Vector2(600, 420),
-			new Phaser.Math.Vector2(960, 420)
-		]
+		// Generate a randomized path across the map
+		this.pathPoints = PathGenerator.generateRandomPath(this.scale.width, this.scale.height)
 
 		// Draw the path for visual feedback
 		const pathGraphics = this.add.graphics()
