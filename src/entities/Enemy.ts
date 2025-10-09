@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import {GameScene} from "@scenes/GameScene";
 
 export class Enemy {
 	public sprite: Phaser.Physics.Arcade.Sprite
@@ -46,4 +47,17 @@ export class Enemy {
 	destroy(): void {
 		this.sprite.destroy()
 	}
+
+    static spawn(scene: GameScene, wave: number): void {
+
+        const hp = 30 + wave * 10
+        const speed = 70 + wave * 3
+
+        const start = scene.pathPoints[0]
+        if (!start) return
+
+        const enemy = new this(scene, start.x, start.y, hp, speed)
+
+        scene.enemies.push(enemy)
+    }
 } 

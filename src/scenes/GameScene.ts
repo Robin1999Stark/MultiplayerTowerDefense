@@ -4,18 +4,20 @@ import { Tower } from '../entities/Tower'
 import { Boss } from '../entities/Boss'
 
 export const GAME_EVENTS = {
-	placeTowerToggle: 'ui.placeTowerToggle',
-	goldChanged: 'game.goldChanged',
-	livesChanged: 'game.livesChanged',
-	waveChanged: 'game.waveChanged'
+    placeTowerToggle: 'ui.placeTowerToggle',
+    goldChanged: 'game.goldChanged',
+    livesChanged: 'game.livesChanged',
+    waveChanged: 'game.waveChanged',
+    enemyKilled: 'game.enemyKilled',
+    towerBuilt: 'game.towerBuilt'
 } as const
 
 export class GameScene extends Phaser.Scene {
 	static KEY = 'GameScene'
 
-	private enemies: Enemy[] = []
-	private towers: Tower[] = []
-	private pathPoints: Phaser.Math.Vector2[] = []
+	enemies: Enemy[] = []
+	pathPoints: Phaser.Math.Vector2[] = []
+    private towers: Tower[] = []
 	private spawnTimer?: Phaser.Time.TimerEvent
 	private isPlacingTower = false
 	private gold = 100
@@ -27,6 +29,10 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	preload(): void {
+		// Start additional scenes
+		this.scene.launch('UIScene');
+		this.scene.launch('StatisticsScene');
+
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
 		// Enemy texture
@@ -94,7 +100,8 @@ export class GameScene extends Phaser.Scene {
 			this.emitGold()
 			const tower = new Tower(this, position.x, position.y)
 			this.towers.push(tower)
-		})
+            this.game.events.emit(GAME_EVENTS.towerBuilt)
+        })
 
 		// Start wave spawning
 		this.startWave(this.wave)
@@ -132,8 +139,6 @@ export class GameScene extends Phaser.Scene {
 		// End wave if no enemies remaining and no more to spawn
 		if (this.enemies.length === 0 && this.spawnTimer && this.spawnTimer.getRepeatCount() === 0 && this.spawnTimer.getProgress() === 1) {
 			// Delay then start next wave
-            console.log('enemies', this.wave)
-			
             this.time.delayedCall(200, () => {
 				this.wave += 1
 				this.emitWave()
@@ -150,42 +155,41 @@ export class GameScene extends Phaser.Scene {
 	private startWave(wave: number): void {
 		// Boss every 5th wave
 		if (wave % 5 === 0) {
-            console.log('boss')
-			const start = this.pathPoints[0]
-			if (!start) return
-			const bossHp = 6000 + wave * 60
-			const bossSpeed = 10 + Math.floor(wave * 1.5)
-			const boss = new Boss(this, start.x, start.y, bossHp, bossSpeed)
-			this.enemies.push(boss)
+            Boss.spawn(this, wave);
 			return
 		}
 
 		const count = 6 + Math.floor(wave * 1.5)
-		const hp = 30 + wave * 10
-		const speed = 70 + wave * 3
+
 		this.spawnTimer?.remove()
 		this.spawnTimer = this.time.addEvent({
 			delay: 400,
 			repeat: count - 1,
 			callback: () => {
-				const start = this.pathPoints[0]
-				if (!start) return
-				const enemy = new Enemy(this, start.x, start.y, hp, speed)
-				this.enemies.push(enemy)
-			}
+                Enemy.spawn(this, wave);
+            },
 		})
 	}
 
 	private removeEnemy(enemy: Enemy): void {
+
 		const idx = this.enemies.indexOf(enemy)
-		if (idx >= 0) this.enemies.splice(idx, 1)
-		enemy.destroy()
+		if (idx >= 0) {
+            this.enemies.splice(idx, 1)
+
+            if (enemy.isDead()) {
+                this.game.events.emit(GAME_EVENTS.enemyKilled)
+            }
+        }
+
+        enemy.destroy()
 	}
 
 	private emitGold(): void {
 		this.registry.set('gold', this.gold)
 		this.game.events.emit(GAME_EVENTS.goldChanged, this.gold)
 	}
+
 	private emitLives(): void {
 		this.registry.set('lives', this.lives)
 		this.game.events.emit(GAME_EVENTS.livesChanged, this.lives)

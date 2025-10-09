@@ -7,39 +7,10 @@
 		<style>
 			:root { color-scheme: light dark; }
 			html, body, #app { height: 100%; margin: 0; }
-			#ui-root {
-				position: fixed;
-				top: 0; left: 0; right: 0;
-				padding: 8px 12px;
-				font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji;
-				pointer-events: none;
-			}
-			.ui-panel {
-				background: color-mix(in oklab, Canvas, CanvasText 6%);
-				backdrop-filter: blur(6px);
-				border: 1px solid color-mix(in oklab, CanvasText, transparent 85%);
-				border-radius: 8px;
-				padding: 8px 10px;
-				display: inline-flex;
-				gap: 10px;
-				align-items: center;
-				pointer-events: auto;
-			}
-			.button { cursor: pointer; padding: 6px 10px; border-radius: 6px; border: 1px solid color-mix(in oklab, CanvasText, transparent 80%); background: color-mix(in oklab, Canvas, CanvasText 4%); }
-			.button:hover { background: color-mix(in oklab, Canvas, CanvasText 7%); }
-			.status { opacity: 0.85; font-size: 14px; }
 		</style>
 	</head>
 	<body>
 		<div id="app"></div>
-		<div id="ui-root">
-			<div class="ui-panel">
-				<button id="place-tower" onclick="console.log('place-tower clicked')" class="button">Place Tower</button>
-				<span class="status">Gold: <span id="gold">100</span></span>
-				<span class="status">Lives: <span id="lives">20</span></span>
-				<span class="status">Wave: <span id="wave">1</span></span>
-			</div>
-		</div>
 		<script type="module" src="/src/main.ts"></script>
 	</body>
 </html> 
