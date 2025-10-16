@@ -14,7 +14,7 @@ export class ChainTower extends Tower {
         
         this.sprite.destroy()
 
-        this.sprite = scene.add.sprite(x, y, 'tower1')
+        this.sprite = scene.add.sprite(x, y, 'tower_rapid_fire')
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
         

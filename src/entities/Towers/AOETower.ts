@@ -13,7 +13,7 @@ export class AOETower extends Tower {
         super(scene, x, y, type)
         // Replace the sprite with the common tower1 texture
         this.sprite.destroy()
-        this.sprite = scene.add.sprite(x, y, 'tower1')
+        this.sprite = scene.add.sprite(x, y, 'tower_explosive')
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
         

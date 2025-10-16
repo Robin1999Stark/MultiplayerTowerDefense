@@ -12,7 +12,7 @@ export class RapidFireTower extends Tower {
         super(scene, x, y, type)
         
         this.sprite.destroy()
-        this.sprite = scene.add.sprite(x, y, 'tower1')
+        this.sprite = scene.add.sprite(x, y, 'tower_rapid')
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
         

@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import {Enemy} from '../entities/Enemy'
 import {Boss} from '../entities/Boss'
 import {PathGenerator} from './PathGenerator'
-import {TowerStore, TowerType} from '../services/TowerStore'
+import {TowerStore, TowerType, TowerTypeID} from '../services/TowerStore'
 import {Tower} from "../entities/Towers/Tower";
 import {TowerFactory} from "../entities/Towers/TowerFactory";
 
@@ -44,7 +44,11 @@ export class GameScene extends Phaser.Scene {
 		// Load external assets
 		this.load.image('orc_grunt', 'assets/units/orc_grunt.png')
 		this.load.image('orc_warrior', 'assets/units/orc_warrior.png')
-		this.load.image('tower1', 'assets/towers/tower1.png')
+		this.load.image('tower_basic', 'assets/towers/tower_basic.png')
+		this.load.image('tower_laser', 'assets/towers/tower_laser.png')
+		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
+		this.load.image('tower_rapid', 'assets/towers/tower_rapid.png')
+		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
 		this.load.image('arrow', 'assets/projectiles/arrow.png')
 		this.load.image('background', 'assets/background.jpeg')
 		this.load.image('floor_tile', 'assets/floor_tile.jpeg')
@@ -68,8 +72,6 @@ export class GameScene extends Phaser.Scene {
 		g.generateTexture('bullet', 8, 8)
 		g.destroy()
 
-		// Generate tower textures for all tower types
-		this.towerStore.generateAllTowerTextures(this)
 	}
 
 	create(): void {
@@ -239,9 +241,34 @@ export class GameScene extends Phaser.Scene {
 		if (this.ghostTower) {
 			this.ghostTower.destroy()
 		}
-		this.ghostTower = this.add.sprite(0, 0, `tower_${towerType.id}`)
+		// Use the same texture as the actual tower
+		let textureKey = 'tower_basic'
+		let scale = 0.08 // Default scale for basic tower
+		switch (towerType.id) {
+			case TowerTypeID.SNIPER:
+				textureKey = 'tower_laser'
+				scale = 0.1
+				break
+			case TowerTypeID.RAPID:
+				textureKey = 'tower_rapid'
+				scale = 0.1
+				break
+			case TowerTypeID.CHAIN:
+				textureKey = 'tower_rapid_fire'
+				scale = 0.1
+				break
+			case TowerTypeID.AOE:
+				textureKey = 'tower_explosive'
+				scale = 0.1
+				break
+			default:
+				textureKey = 'tower_basic'
+				scale = 0.08
+		}
+		this.ghostTower = this.add.sprite(0, 0, textureKey)
 		this.ghostTower.setDepth(1)
 		this.ghostTower.setAlpha(0.6)
+		this.ghostTower.setScale(scale)
 
 		// Emit event for UI update
 		this.game.events.emit(GAME_EVENTS.towerTypeSelected, towerType)

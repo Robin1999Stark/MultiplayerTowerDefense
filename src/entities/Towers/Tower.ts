@@ -17,9 +17,9 @@ export class Tower {
 		this.range = type.range
 		this.fireRateMs = type.fireRateMs
 		this.damage = type.damage
-		this.sprite = scene.add.sprite(x, y, 'tower1')
+		this.sprite = scene.add.sprite(x, y, 'tower_basic')
 		this.sprite.setDepth(2)
-		this.sprite.setScale(0.1)
+		this.sprite.setScale(0.08)
 	}
 
 	update(deltaMs: number, enemies: Enemy[]): void {
