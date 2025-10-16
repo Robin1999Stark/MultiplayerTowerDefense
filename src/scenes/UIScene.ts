@@ -47,8 +47,6 @@ export class UIScene extends Phaser.Scene {
 			return
 		}
 
-        console.log('test')
-
 		// Initialize labels from registry immediately
 		const gold = this.registry.get('gold') as number | undefined
 		const lives = this.registry.get('lives') as number | undefined

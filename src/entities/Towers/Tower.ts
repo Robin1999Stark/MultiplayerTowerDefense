@@ -7,18 +7,19 @@ export class Tower {
 	private readonly range: number
 	private readonly fireRateMs: number
 	private readonly damage: number
-	private timeSinceShot = 0
+	protected timeSinceShot = 0
 	private scene: Phaser.Scene
 	public readonly type: TowerType
 
 	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		this.scene = scene
+		this.sprite = scene.add.sprite(x, y, 'tower1')
 		this.type = type
 		this.range = type.range
 		this.fireRateMs = type.fireRateMs
 		this.damage = type.damage
-		this.sprite = scene.add.sprite(x, y, `tower_${type.id}`)
 		this.sprite.setDepth(2)
+		this.sprite.setScale(0.1)
 	}
 
 	update(deltaMs: number, enemies: Enemy[]): void {
@@ -48,9 +49,13 @@ export class Tower {
 		this.playShootTone()
 
 		// Visual bullet: tweened sprite that damages on arrival
-		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'bullet')
+		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow')
+		bullet.setScale(0.03)
+		bullet.setOrigin(0.5, 0.5)
 		bullet.setDepth(3)
 		const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
+		const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)
+		bullet.setRotation(angle - Math.PI / 2)
 		this.scene.tweens.add({
 			targets: bullet,
 			x: target.sprite.x,
@@ -88,13 +93,13 @@ export class Tower {
 	private getAudioContext(): AudioContext | null {
 		const phaserSound = this.scene.sound as { context?: AudioContext }
 		const existingCtx = phaserSound?.context || window.audioCtx
-		
+
 		if (existingCtx) return existingCtx
 
 		try {
 			const AudioContextClass = window.AudioContext || window.webkitAudioContext
 			if (!AudioContextClass) return null
-			
+
 			const newCtx = new AudioContextClass()
 			window.audioCtx = newCtx
 			return newCtx

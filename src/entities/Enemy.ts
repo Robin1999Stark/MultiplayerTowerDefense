@@ -8,8 +8,9 @@ export class Enemy {
 	public reachedEnd = false
 	private pathIndex = 0
 
-	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number, textureKey: string = 'enemy', radius: number = 16) {
+	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number, textureKey: string = 'orc_grunt', radius: number = 16) {
 		this.sprite = scene.physics.add.sprite(x, y, textureKey)
+		this.sprite.setScale(0.05)
 		this.sprite.setCircle(radius, 16 - radius, 16 - radius)
 		this.sprite.setDepth(1)
 		this.hp = hp

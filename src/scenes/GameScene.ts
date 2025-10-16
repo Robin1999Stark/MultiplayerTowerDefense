@@ -1,9 +1,9 @@
 import Phaser from 'phaser'
 import {Enemy} from '../entities/Enemy'
-import {Tower} from '../entities/Tower'
 import {Boss} from '../entities/Boss'
 import {PathGenerator} from './PathGenerator'
 import {TowerStore, TowerType} from '../services/TowerStore'
+import {Tower} from "../entities/Towers/Tower";
 
 export const GAME_EVENTS = {
     placeTowerToggle: 'ui.placeTowerToggle',
@@ -36,6 +36,16 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	preload(): void {
+		// Start additional scenes
+		this.scene.launch('UIScene');
+		this.scene.launch('StatisticsScene');
+
+		// Load external assets
+		this.load.image('orc_grunt', 'assets/units/orc_grunt.png')
+		this.load.image('orc_warrior', 'assets/units/orc_warrior.png')
+		this.load.image('tower1', 'assets/towers/tower1.png')
+		this.load.image('arrow', 'assets/projectiles/arrow.png')
+
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
 		// Enemy texture
@@ -141,7 +151,7 @@ export class GameScene extends Phaser.Scene {
 		for (const enemy of [...this.enemies]) {
 			enemy.update(delta, this.pathPoints)
 			if (enemy.isDead()) {
-				const isBoss = enemy instanceof Boss
+				const isBoss = (enemy as any).sprite.texture.key === 'orc_warrior'
 				this.gold += isBoss ? 100 : 10
 				this.emitGold()
 				this.playPlop()
