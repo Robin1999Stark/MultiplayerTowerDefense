@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/types.d.ts","./src/entities/boss.ts","./src/entities/enemy.ts","./src/entities/tower.ts","./src/scenes/gamescene.ts","./src/scenes/pathgenerator.ts","./src/scenes/statisticsscene.ts","./src/scenes/uiscene.ts"],"version":"5.9.3"}
