@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { StartScene } from './scenes/StartScene'
 import { GameScene } from './scenes/GameScene'
 import { UIScene } from './scenes/UIScene'
 import { StatisticsScene } from './scenes/StatisticsScene'
@@ -20,7 +21,7 @@ const config: Phaser.Types.Core.GameConfig = {
 			debug: false
 		},
 	},
-    scene: [ GameScene, StatisticsScene, UIScene ]
+	scene: [StartScene, GameScene, StatisticsScene, UIScene]
 }
 
 new Phaser.Game(config) 

@@ -36,10 +36,6 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	preload(): void {
-		// Start additional scenes
-		this.scene.launch('UIScene');
-		this.scene.launch('StatisticsScene');
-
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
 		// Enemy texture
