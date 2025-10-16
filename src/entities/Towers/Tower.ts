@@ -1,17 +1,23 @@
 import Phaser from 'phaser'
-import { Enemy } from '../Enemy'
+import { Enemy } from './Enemy'
+import { TowerType } from '../services/TowerStore'
 
 export class Tower {
 	public sprite: Phaser.GameObjects.Sprite
-	private range = 1000
-	private fireRateMs = 200
-	private damage = 400
+	private readonly range: number
+	private readonly fireRateMs: number
+	private readonly damage: number
 	protected timeSinceShot = 0
 	private scene: Phaser.Scene
+	public readonly type: TowerType
 
-	constructor(scene: Phaser.Scene, x: number, y: number) {
+	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		this.scene = scene
-		this.sprite = scene.add.sprite(x, y, 'tower')
+		this.type = type
+		this.range = type.range
+		this.fireRateMs = type.fireRateMs
+		this.damage = type.damage
+		this.sprite = scene.add.sprite(x, y, `tower_${type.id}`)
 		this.sprite.setDepth(2)
 	}
 
@@ -58,17 +64,9 @@ export class Tower {
 	}
 
 	private playShootTone(): void {
-		const sm: any = (this.scene as any).sound
-		const ctx: AudioContext | undefined = sm && sm.context ? sm.context as AudioContext : (window as any).audioCtx || undefined
-		let audioCtx = ctx
-		if (!audioCtx) {
-			try {
-				audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-				;(window as any).audioCtx = audioCtx
-			} catch {
-				return
-			}
-		}
+		const audioCtx = this.getAudioContext()
+		if (!audioCtx) return
+
 		const durationSec = 0.1
 		const oscillator = audioCtx.createOscillator()
 		const gainNode = audioCtx.createGain()
@@ -82,7 +80,26 @@ export class Tower {
 		oscillator.start()
 		oscillator.stop(audioCtx.currentTime + durationSec)
 		oscillator.onended = () => {
-			try { oscillator.disconnect(); gainNode.disconnect() } catch {}
+			oscillator.disconnect()
+			gainNode.disconnect()
+		}
+	}
+
+	private getAudioContext(): AudioContext | null {
+		const phaserSound = this.scene.sound as { context?: AudioContext }
+		const existingCtx = phaserSound?.context || window.audioCtx
+
+		if (existingCtx) return existingCtx
+
+		try {
+			const AudioContextClass = window.AudioContext || window.webkitAudioContext
+			if (!AudioContextClass) return null
+
+			const newCtx = new AudioContextClass()
+			window.audioCtx = newCtx
+			return newCtx
+		} catch (error) {
+			return null
 		}
 	}
 } 

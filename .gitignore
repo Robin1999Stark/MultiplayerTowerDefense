@@ -4,6 +4,9 @@ node_modules/
 # Build output
 dist/
 .vite/
+*.js
+*.js.map
+tsconfig.tsbuildinfo
 
 # Logs
 npm-debug.log*
