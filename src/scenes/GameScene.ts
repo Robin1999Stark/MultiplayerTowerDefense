@@ -179,10 +179,38 @@ export class GameScene extends Phaser.Scene {
 
             if (enemy.isDead()) {
                 this.game.events.emit(GAME_EVENTS.enemyKilled)
-            }
+			}
         }
 
-        enemy.destroy()
+		if (enemy.isDead()) {
+			this.flingEnemyOffscreen(enemy)
+			return
+		}
+
+		enemy.destroy()
+	}
+
+	private flingEnemyOffscreen(enemy: Enemy): void {
+		// Disable physics and fling the sprite offscreen with a spin, then destroy
+		enemy.sprite.setVelocity(0, 0)
+		const body = enemy.sprite.body as Phaser.Physics.Arcade.Body | null | undefined
+		if (body) body.setEnable(false)
+
+		const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
+		const distance = Math.max(this.scale.width, this.scale.height) + 200
+		const targetX = enemy.sprite.x + Math.cos(angle) * distance
+		const targetY = enemy.sprite.y + Math.sin(angle) * distance
+		const spin = Phaser.Math.FloatBetween(20, 60) * (Math.random() < 0.5 ? -1 : 1)
+
+		this.tweens.add({
+			targets: enemy.sprite,
+			x: targetX,
+			y: targetY,
+			rotation: enemy.sprite.rotation + spin,
+			duration: 4500,
+			ease: 'Quad.easeOut',
+			onComplete: () => enemy.destroy()
+		})
 	}
 
 	private emitGold(): void {
