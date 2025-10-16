@@ -1,9 +1,10 @@
 import Phaser from 'phaser'
 import {Enemy} from '../entities/Enemy'
-import {Tower} from '../entities/Tower'
 import {Boss} from '../entities/Boss'
 import {PathGenerator} from './PathGenerator'
 import {TowerStore, TowerType} from '../services/TowerStore'
+import {Tower} from "../entities/Towers/Tower";
+import {TowerFactory} from "../entities/Towers/TowerFactory";
 
 export const GAME_EVENTS = {
     placeTowerToggle: 'ui.placeTowerToggle',
@@ -168,7 +169,7 @@ export class GameScene extends Phaser.Scene {
 			// Deduct gold and place tower
 			this.gold -= this.selectedTowerType.cost
 			this.emitGold()
-			const tower = new Tower(this, position.x, position.y, this.selectedTowerType)
+			const tower = TowerFactory.createTower(this, position.x, position.y, this.selectedTowerType)
 			this.towers.push(tower)
             this.game.events.emit(GAME_EVENTS.towerBuilt)
 
@@ -189,7 +190,7 @@ export class GameScene extends Phaser.Scene {
 		for (const enemy of [...this.enemies]) {
 			enemy.update(delta, this.pathPoints)
 			if (enemy.isDead()) {
-				const isBoss = (enemy as any).sprite.texture.key === 'orc_warrior'
+				const isBoss = enemy.sprite.texture.key === 'orc_warrior'
 				this.gold += isBoss ? 100 : 10
 				this.emitGold()
 				this.playPlop()

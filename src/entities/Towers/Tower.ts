@@ -1,17 +1,17 @@
 import Phaser from 'phaser'
-import { Enemy } from './Enemy'
-import { TowerType } from '../services/TowerStore'
+import { Enemy } from '../Enemy'
+import { TowerType } from '../../services/TowerStore'
 
 export class Tower {
 	public sprite: Phaser.GameObjects.Sprite
-	private readonly range: number
-	private readonly fireRateMs: number
-	private readonly damage: number
-	private timeSinceShot = 0
+	protected readonly range: number
+	protected readonly fireRateMs: number
+    protected readonly damage: number
+	protected timeSinceShot = 0
 	private scene: Phaser.Scene
-	public readonly type: TowerType
+    public readonly type: TowerType
 
-	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
+    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		this.scene = scene
 		this.type = type
 		this.range = type.range
@@ -19,7 +19,7 @@ export class Tower {
 		this.damage = type.damage
 		this.sprite = scene.add.sprite(x, y, 'tower1')
 		this.sprite.setDepth(2)
-		this.sprite.setScale(0.02)
+		this.sprite.setScale(0.1)
 	}
 
 	update(deltaMs: number, enemies: Enemy[]): void {
@@ -93,13 +93,13 @@ export class Tower {
 	private getAudioContext(): AudioContext | null {
 		const phaserSound = this.scene.sound as { context?: AudioContext }
 		const existingCtx = phaserSound?.context || window.audioCtx
-		
+
 		if (existingCtx) return existingCtx
 
 		try {
 			const AudioContextClass = window.AudioContext || window.webkitAudioContext
 			if (!AudioContextClass) return null
-			
+
 			const newCtx = new AudioContextClass()
 			window.audioCtx = newCtx
 			return newCtx
