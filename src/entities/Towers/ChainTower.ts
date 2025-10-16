@@ -199,13 +199,15 @@ export class ChainTower extends Tower {
 
     private playChainSound(volume: number = 1.0): void {
         const scene = this.sprite.scene
-        const sm: any = (scene as any).sound
-        const ctx: AudioContext | undefined = sm && sm.context ? sm.context as AudioContext : (window as any).audioCtx || undefined
+        const sm = scene.sound as Phaser.Sound.WebAudioSoundManager
+        const ctx: AudioContext | undefined = sm?.context || (window as Window & { audioCtx?: AudioContext }).audioCtx
         let audioCtx = ctx
         if (!audioCtx) {
             try {
-                audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-                ;(window as any).audioCtx = audioCtx
+                const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+                if (!AudioContextClass) return
+                audioCtx = new AudioContextClass()
+                ;(window as Window & { audioCtx?: AudioContext }).audioCtx = audioCtx
             } catch {
                 return
             }
@@ -232,7 +234,12 @@ export class ChainTower extends Tower {
         oscillator.stop(audioCtx.currentTime + durationSec)
         
         oscillator.onended = () => {
-            try { oscillator.disconnect(); gainNode.disconnect() } catch {}
+            try { 
+                oscillator.disconnect(); 
+                gainNode.disconnect() 
+            } catch (error) {
+                console.error('Error disconnecting audio nodes:', error)
+            }
         }
     }
 }
