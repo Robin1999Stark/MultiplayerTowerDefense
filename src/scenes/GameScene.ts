@@ -110,6 +110,21 @@ export class GameScene extends Phaser.Scene {
 			stripe.setOrigin(0.5, 0.5)
 			stripe.tileScaleX = tileScaleX
 			stripe.tileScaleY = tileScaleY
+			// Create a soft edge mask so the path blends into the background
+			const maskGfx = this.add.graphics()
+			maskGfx.setDepth(-1)
+			maskGfx.setPosition(midX, midY)
+			maskGfx.setRotation(angle)
+			const halfH = tileH / 2
+			for (let y = -halfH; y <= halfH; y++) {
+				const t = Math.abs(y) / halfH // 0 center -> 1 edge
+				const alpha = Phaser.Math.Clamp(1 - t, 0, 1)
+				maskGfx.fillStyle(0xffffff, alpha)
+				maskGfx.fillRect(-dist / 2, y, dist, 1)
+			}
+			const mask = new Phaser.Display.Masks.BitmapMask(this, maskGfx)
+			stripe.setMask(mask)
+			maskGfx.setVisible(false)
 		}
 
 		// Subscribe to UI toggle for placing towers (deprecated, keeping for backwards compatibility)
