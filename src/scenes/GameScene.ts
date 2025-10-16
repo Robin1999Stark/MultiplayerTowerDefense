@@ -39,6 +39,8 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('orc_warrior', 'assets/units/orc_warrior.png')
 		this.load.image('tower1', 'assets/towers/tower1.png')
 		this.load.image('arrow', 'assets/projectiles/arrow.png')
+		this.load.image('background', 'assets/background.jpeg')
+		this.load.image('floor_tile', 'assets/floor_tile.jpeg')
 
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
@@ -68,6 +70,14 @@ export class GameScene extends Phaser.Scene {
 	create(): void {
 		this.cameras.main.setBackgroundColor('#0b1020')
 
+		// Add background image scaled to game size
+		const bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background')
+		bg.setDepth(-10)
+		const bgScaleX = this.scale.width / bg.width
+		const bgScaleY = this.scale.height / bg.height
+		const scale = Math.max(bgScaleX, bgScaleY)
+		bg.setScale(scale)
+
 		// Initialize registry so UI can read initial values immediately
 		this.registry.set('gold', this.gold)
 		this.registry.set('lives', this.lives)
@@ -76,13 +86,26 @@ export class GameScene extends Phaser.Scene {
 		// Generate a randomized path across the map
 		this.pathPoints = PathGenerator.generateRandomPath(this.scale.width, this.scale.height)
 
-		// Draw the path for visual feedback
-		const pathGraphics = this.add.graphics()
-		pathGraphics.lineStyle(16, 0x334155, 1)
+		// Draw the path using tiled floor sprites
+		const tex = this.textures.get('floor_tile')
+		const src = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement | null
+		const tileW = 32
+		const tileH = 32
+		const tileScaleX = src ? tileW / (src as HTMLImageElement | HTMLCanvasElement).width : 1
+		const tileScaleY = src ? tileH / (src as HTMLImageElement | HTMLCanvasElement).height : 1
 		for (let i = 0; i < this.pathPoints.length - 1; i++) {
 			const a = this.pathPoints[i]!
 			const b = this.pathPoints[i + 1]!
-			pathGraphics.strokeLineShape(new Phaser.Geom.Line(a.x, a.y, b.x, b.y))
+			const midX = (a.x + b.x) / 2
+			const midY = (a.y + b.y) / 2
+			const dist = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y)
+			const angle = Phaser.Math.Angle.Between(a.x, a.y, b.x, b.y)
+			const stripe = this.add.tileSprite(midX, midY, dist, tileH, 'floor_tile')
+			stripe.setDepth(0)
+			stripe.setRotation(angle)
+			stripe.setOrigin(0.5, 0.5)
+			stripe.tileScaleX = tileScaleX
+			stripe.tileScaleY = tileScaleY
 		}
 
 		// Subscribe to UI toggle for placing towers
