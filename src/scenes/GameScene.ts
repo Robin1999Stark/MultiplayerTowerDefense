@@ -145,7 +145,7 @@ export class GameScene extends Phaser.Scene {
 		for (const enemy of [...this.enemies]) {
 			enemy.update(delta, this.pathPoints)
 			if (enemy.isDead()) {
-				const isBoss = (enemy as any).sprite.texture.key === 'boss'
+				const isBoss = enemy instanceof Boss
 				this.gold += isBoss ? 100 : 10
 				this.emitGold()
 				this.playPlop()
@@ -300,16 +300,9 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private playPlop(): void {
-		const sm: any = (this as any).sound
-        let audioCtx = sm && sm.context ? sm.context as AudioContext : (window as any).audioCtx || undefined
-		if (!audioCtx) {
-			try {
-				audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-				;(window as any).audioCtx = audioCtx
-			} catch {
-				return
-			}
-		}
+		const audioCtx = this.getAudioContext()
+		if (!audioCtx) return
+
 		const durationSec = 0.06
 		const osc = audioCtx.createOscillator()
 		const gain = audioCtx.createGain()
@@ -324,7 +317,26 @@ export class GameScene extends Phaser.Scene {
 		osc.start()
 		osc.stop(audioCtx.currentTime + durationSec)
 		osc.onended = () => {
-			try { osc.disconnect(); gain.disconnect() } catch {}
+			osc.disconnect()
+			gain.disconnect()
+		}
+	}
+
+	private getAudioContext(): AudioContext | null {
+		const phaserSound = this.sound as { context?: AudioContext }
+		const existingCtx = phaserSound?.context || window.audioCtx
+
+		if (existingCtx) return existingCtx
+
+		try {
+			const AudioContextClass = window.AudioContext || window.webkitAudioContext
+			if (!AudioContextClass) return null
+
+			const newCtx = new AudioContextClass()
+			window.audioCtx = newCtx
+			return newCtx
+		} catch (error) {
+			return null
 		}
 	}
 } 

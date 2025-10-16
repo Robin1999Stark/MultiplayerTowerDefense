@@ -64,17 +64,9 @@ export class Tower {
 	}
 
 	private playShootTone(): void {
-		const sm: any = (this.scene as any).sound
-		const ctx: AudioContext | undefined = sm && sm.context ? sm.context as AudioContext : (window as any).audioCtx || undefined
-		let audioCtx = ctx
-		if (!audioCtx) {
-			try {
-				audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-				;(window as any).audioCtx = audioCtx
-			} catch {
-				return
-			}
-		}
+		const audioCtx = this.getAudioContext()
+		if (!audioCtx) return
+
 		const durationSec = 0.1
 		const oscillator = audioCtx.createOscillator()
 		const gainNode = audioCtx.createGain()
@@ -88,7 +80,26 @@ export class Tower {
 		oscillator.start()
 		oscillator.stop(audioCtx.currentTime + durationSec)
 		oscillator.onended = () => {
-			try { oscillator.disconnect(); gainNode.disconnect() } catch {}
+			oscillator.disconnect()
+			gainNode.disconnect()
+		}
+	}
+
+	private getAudioContext(): AudioContext | null {
+		const phaserSound = this.scene.sound as { context?: AudioContext }
+		const existingCtx = phaserSound?.context || window.audioCtx
+		
+		if (existingCtx) return existingCtx
+
+		try {
+			const AudioContextClass = window.AudioContext || window.webkitAudioContext
+			if (!AudioContextClass) return null
+			
+			const newCtx = new AudioContextClass()
+			window.audioCtx = newCtx
+			return newCtx
+		} catch (error) {
+			return null
 		}
 	}
 } 
