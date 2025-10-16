@@ -1,8 +1,9 @@
 import Phaser from 'phaser'
-import { Enemy } from '../entities/Enemy'
-import { Tower } from '../entities/Tower'
-import { Boss } from '../entities/Boss'
-import { PathGenerator } from './PathGenerator'
+import {Enemy} from '../entities/Enemy'
+import {Tower} from '../entities/Tower'
+import {Boss} from '../entities/Boss'
+import {PathGenerator} from './PathGenerator'
+import {TowerStore, TowerType} from '../services/TowerStore'
 
 export const GAME_EVENTS = {
     placeTowerToggle: 'ui.placeTowerToggle',
@@ -10,7 +11,8 @@ export const GAME_EVENTS = {
     livesChanged: 'game.livesChanged',
     waveChanged: 'game.waveChanged',
     enemyKilled: 'game.enemyKilled',
-    towerBuilt: 'game.towerBuilt'
+	towerBuilt: 'game.towerBuilt',
+	towerTypeSelected: 'game.towerTypeSelected'
 } as const
 
 export class GameScene extends Phaser.Scene {
@@ -19,14 +21,18 @@ export class GameScene extends Phaser.Scene {
 	enemies: Enemy[] = []
 	pathPoints: Phaser.Math.Vector2[] = []
     private towers: Tower[] = []
-	private spawnTimer?: Phaser.Time.TimerEvent
-	private isPlacingTower = false
-	private gold = 100
-	private lives = 20
-	private wave = 1
+	private spawnTimer?: Phaser.Time.TimerEvent | undefined
+    private isPlacingTower = false
+    private gold = 100
+    private lives = 20
+    private wave = 1
+    private towerStore: TowerStore
+    private selectedTowerType: TowerType | null = null
+    private ghostTower?: Phaser.GameObjects.Sprite | undefined
 
 	constructor() {
 		super(GameScene.KEY)
+		this.towerStore = TowerStore.getInstance()
 	}
 
 	preload(): void {
@@ -46,17 +52,15 @@ export class GameScene extends Phaser.Scene {
 		g.fillStyle(0xffff00, 1)
 		g.fillCircle(32, 32, 32)
 		g.generateTexture('boss', 64, 64)
-		// Tower texture
-		g.clear()
-		g.fillStyle(0x2ed573, 1)
-		g.fillRoundedRect(0, 0, 32, 32, 6)
-		g.generateTexture('tower', 32, 32)
 		// Bullet texture
 		g.clear()
 		g.fillStyle(0xffffff, 1)
 		g.fillCircle(4, 4, 4)
 		g.generateTexture('bullet', 8, 8)
 		g.destroy()
+
+		// Generate tower textures for all tower types
+		this.towerStore.generateAllTowerTextures(this)
 	}
 
 	create(): void {
@@ -79,22 +83,52 @@ export class GameScene extends Phaser.Scene {
 			pathGraphics.strokeLineShape(new Phaser.Geom.Line(a.x, a.y, b.x, b.y))
 		}
 
-		// Subscribe to UI toggle for placing towers
+		// Subscribe to UI toggle for placing towers (deprecated, keeping for backwards compatibility)
 		this.game.events.on(GAME_EVENTS.placeTowerToggle, this.onPlaceTowerToggle, this)
+
+		// Keyboard input for tower selection
+		this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+			const towerType = this.towerStore.getTowerTypeByKey(event.key)
+			if (towerType) {
+				this.selectTowerType(towerType)
+			} else if (event.key === 'Escape') {
+				this.deselectTowerType()
+			}
+		})
+
+		// Mouse movement for ghost tower preview
+		this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+			if (this.ghostTower && this.selectedTowerType) {
+				const position = this.snapToGrid(pointer.worldX, pointer.worldY)
+				this.ghostTower.setPosition(position.x, position.y)
+
+				// Color ghost based on whether placement is valid
+				const canPlace = !this.isOnPath(position) && this.gold >= this.selectedTowerType.cost
+				this.ghostTower.setAlpha(canPlace ? 0.6 : 0.3)
+				this.ghostTower.setTint(canPlace ? 0xffffff : 0xff0000)
+			}
+		})
 
 		// Input to place a tower when in placement mode
 		this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-			if (this.isPlacingTower) return
+			if (!this.selectedTowerType) return
+
 			const position = this.snapToGrid(pointer.worldX, pointer.worldY)
+
 			// Prevent placing on path by checking distance to segments
 			if (this.isOnPath(position)) return
-			const towerCost = 50
-			if (this.gold < towerCost) return
-			this.gold -= towerCost
+
+			// Check if player has enough gold
+			if (this.gold < this.selectedTowerType.cost) return
+
+			// Deduct gold and place tower
+			this.gold -= this.selectedTowerType.cost
 			this.emitGold()
-			const tower = new Tower(this, position.x, position.y)
+			const tower = new Tower(this, position.x, position.y, this.selectedTowerType)
 			this.towers.push(tower)
             this.game.events.emit(GAME_EVENTS.towerBuilt)
+
+			// Keep the same tower type selected for multiple placements
         })
 
 		// Start wave spawning
@@ -144,6 +178,41 @@ export class GameScene extends Phaser.Scene {
 	private onPlaceTowerToggle = (enabled: boolean) => {
 		this.isPlacingTower = enabled
 		this.input.setDefaultCursor(enabled ? 'crosshair' : 'default')
+	}
+
+	private selectTowerType(towerType: TowerType): void {
+		// Check if player can afford this tower
+		if (this.gold < towerType.cost) {
+			// Could add a visual feedback here that player can't afford it
+			return
+		}
+
+		this.selectedTowerType = towerType
+		this.input.setDefaultCursor('crosshair')
+
+		// Create or update ghost tower
+		if (this.ghostTower) {
+			this.ghostTower.destroy()
+		}
+		this.ghostTower = this.add.sprite(0, 0, `tower_${towerType.id}`)
+		this.ghostTower.setDepth(1)
+		this.ghostTower.setAlpha(0.6)
+
+		// Emit event for UI update
+		this.game.events.emit(GAME_EVENTS.towerTypeSelected, towerType)
+	}
+
+	private deselectTowerType(): void {
+		this.selectedTowerType = null
+		this.input.setDefaultCursor('default')
+
+		if (this.ghostTower) {
+			this.ghostTower.destroy()
+			this.ghostTower = undefined
+		}
+
+		// Emit event for UI update
+		this.game.events.emit(GAME_EVENTS.towerTypeSelected, null)
 	}
 
 	private startWave(wave: number): void {
@@ -232,8 +301,7 @@ export class GameScene extends Phaser.Scene {
 
 	private playPlop(): void {
 		const sm: any = (this as any).sound
-		const ctx: AudioContext | undefined = sm && sm.context ? sm.context as AudioContext : (window as any).audioCtx || undefined
-		let audioCtx = ctx
+        let audioCtx = sm && sm.context ? sm.context as AudioContext : (window as any).audioCtx || undefined
 		if (!audioCtx) {
 			try {
 				audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
