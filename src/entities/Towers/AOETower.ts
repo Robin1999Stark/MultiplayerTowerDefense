@@ -1,18 +1,16 @@
 import Phaser from 'phaser'
 import { Enemy } from '../Enemy'
 import { Tower } from './Tower'
+import { TowerType } from "../../services/TowerStore";
 
 export class AOETower extends Tower {
-    private aoeRange = 150
-    private aoeDamage = 200
-    private aoeRateMs = 2000
+
     private timeSinceAOE = 0
     private aoeEffect?: Phaser.GameObjects.Graphics
 
-    constructor(scene: Phaser.Scene, x: number, y: number) {
+    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         // Call parent constructor but we'll override the sprite
-        super(scene, x, y)
-        
+        super(scene, x, y, type)
         // Replace the sprite with the AOE tower texture
         this.sprite.destroy()
         this.sprite = scene.add.sprite(x, y, 'aoe-tower')
@@ -27,7 +25,7 @@ export class AOETower extends Tower {
         // Don't call super.update() as we don't want the default shooting behavior
         
         this.timeSinceAOE += deltaMs
-        if (this.timeSinceAOE < this.aoeRateMs) return
+        if (this.timeSinceAOE < this.fireRateMs) return
         
         // Only trigger AOE if there are enemies in range
         const enemiesInRange = this.findEnemiesInRange(enemies)
@@ -46,7 +44,7 @@ export class AOETower extends Tower {
                 enemy.sprite.x, 
                 enemy.sprite.y
             )
-            if (distance <= this.aoeRange) {
+            if (distance <= this.range) {
                 inRange.push(enemy)
             }
         }
@@ -56,7 +54,7 @@ export class AOETower extends Tower {
     private triggerAOE(enemies: Enemy[]): void {
         // Apply damage to all enemies in range
         for (const enemy of enemies) {
-            enemy.takeDamage(this.aoeDamage)
+            enemy.takeDamage(this.damage)
         }
         
         // Visual effect for the AOE attack
@@ -74,11 +72,11 @@ export class AOETower extends Tower {
         
         // Draw the AOE circle
         this.aoeEffect.fillStyle(0x00ffff, 0.3) // Cyan with transparency
-        this.aoeEffect.fillCircle(this.sprite.x, this.sprite.y, this.aoeRange)
+        this.aoeEffect.fillCircle(this.sprite.x, this.sprite.y, this.range)
         
         // Add a stroke
         this.aoeEffect.lineStyle(2, 0x00ffff, 0.8)
-        this.aoeEffect.strokeCircle(this.sprite.x, this.sprite.y, this.aoeRange)
+        this.aoeEffect.strokeCircle(this.sprite.x, this.sprite.y, this.range)
         
         // Animate the effect fading out
         const scene = this.sprite.scene

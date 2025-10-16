@@ -1,17 +1,17 @@
 import Phaser from 'phaser'
-import { Enemy } from './Enemy'
-import { TowerType } from '../services/TowerStore'
+import { Enemy } from '../Enemy'
+import { TowerType } from '../../services/TowerStore'
 
 export class Tower {
 	public sprite: Phaser.GameObjects.Sprite
-	private readonly range: number
-	private readonly fireRateMs: number
-	private readonly damage: number
+	protected readonly range: number
+	protected readonly fireRateMs: number
+    protected readonly damage: number
 	protected timeSinceShot = 0
 	private scene: Phaser.Scene
-	public readonly type: TowerType
+    public readonly type: TowerType
 
-	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
+    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		this.scene = scene
 		this.sprite = scene.add.sprite(x, y, 'tower1')
 		this.type = type

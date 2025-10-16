@@ -1,16 +1,15 @@
 import Phaser from 'phaser'
 import { Enemy } from '../Enemy'
 import { Tower } from './Tower'
+import { TowerType } from "../../services/TowerStore";
 
 export class RapidFireTower extends Tower {
-    private rapidFireRange = 120
-    private rapidFireDamage = 50
-    private rapidFireRateMs = 50
+
     protected override timeSinceShot = 0
     private readonly bulletEffect?: Phaser.GameObjects.Graphics
 
-    constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y)
+    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
+        super(scene, x, y, type)
         
         this.sprite.destroy()
         this.sprite = scene.add.sprite(x, y, 'rapid-fire-tower')
@@ -24,7 +23,7 @@ export class RapidFireTower extends Tower {
         // Don't call super.update() as we want our own rapid fire behavior
 
         this.timeSinceShot += deltaMs
-        if (this.timeSinceShot < this.rapidFireRateMs) return
+        if (this.timeSinceShot < this.fireRateMs) return
         
         const target = this.findClosestTarget(enemies)
         if (!target) return
@@ -46,7 +45,7 @@ export class RapidFireTower extends Tower {
             )
             
             // Only consider enemies within the rapid fire range
-            if (distance <= this.rapidFireRange && distance < closestDist) {
+            if (distance <= this.range && distance < closestDist) {
                 closestDist = distance
                 closest = enemy
             }
@@ -56,7 +55,7 @@ export class RapidFireTower extends Tower {
     }
 
     private rapidFire(target: Enemy): void {
-        target.takeDamage(this.rapidFireDamage)
+        target.takeDamage(this.damage)
         
         this.showBulletEffect(target)
         

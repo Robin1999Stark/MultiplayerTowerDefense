@@ -1,17 +1,16 @@
 import Phaser from 'phaser'
 import { Enemy } from '../Enemy'
 import { Tower } from './Tower'
+import { TowerType } from "../../services/TowerStore";
 
 export class ChainTower extends Tower {
-    private chainRange = 200
-    private chainDamage = 300
-    private chainRateMs = 800
+
     protected override timeSinceShot = 0
     private chainReactions = 3
     private bulletEffect?: Phaser.GameObjects.Graphics
 
-    constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y)
+    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
+        super(scene, x, y, type)
         
         this.sprite.destroy()
         
@@ -35,7 +34,7 @@ export class ChainTower extends Tower {
         // Don't call super.update() as we want our own chain behavior
         
         this.timeSinceShot += deltaMs
-        if (this.timeSinceShot < this.chainRateMs) return
+        if (this.timeSinceShot < this.fireRateMs) return
         
         const target = this.findClosestTarget(enemies)
         if (!target) return
@@ -56,7 +55,7 @@ export class ChainTower extends Tower {
                 enemy.sprite.y
             )
             
-            if (distance <= this.chainRange && distance < closestDist) {
+            if (distance <= this.range && distance < closestDist) {
                 closestDist = distance
                 closest = enemy
             }
@@ -87,7 +86,7 @@ export class ChainTower extends Tower {
             y: target.sprite.y,
             duration,
             onComplete: () => {
-                target.takeDamage(this.chainDamage)
+                target.takeDamage(this.damage)
                 
                 this.showChainEffect(bullet.x, bullet.y)
                 
@@ -119,7 +118,7 @@ export class ChainTower extends Tower {
                 enemy.sprite.y
             )
             
-            if (distance <= this.chainRange && distance < closestDist) {
+            if (distance <= this.range && distance < closestDist) {
                 closestDist = distance
                 closest = enemy
             }
@@ -152,7 +151,7 @@ export class ChainTower extends Tower {
         
         this.playChainSound(0.7)
         
-        nextTarget.takeDamage(this.chainDamage)
+        nextTarget.takeDamage(this.damage)
         
         this.showChainEffect(nextTarget.sprite.x, nextTarget.sprite.y)
         

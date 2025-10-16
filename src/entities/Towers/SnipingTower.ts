@@ -1,16 +1,15 @@
 import Phaser from 'phaser'
 import { Enemy } from '../Enemy'
 import { Tower } from './Tower'
+import { TowerType } from "../../services/TowerStore";
 
 export class SnipingTower extends Tower {
-    private snipingRange = 2000
-    private snipingDamage = 800
-    private snipingRateMs = 800
+
     private timeSinceSnipe = 0
     private readonly laserEffect?: Phaser.GameObjects.Graphics
 
-    constructor(scene: Phaser.Scene, x: number, y: number) {
-        super(scene, x, y)
+    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
+        super(scene, x, y, type)
         
         this.sprite.destroy()
         this.sprite = scene.add.sprite(x, y, 'sniping-tower')
@@ -24,7 +23,7 @@ export class SnipingTower extends Tower {
         // Don't call super.update() as we want our own sniping behavior
         
         this.timeSinceSnipe += deltaMs
-        if (this.timeSinceSnipe < this.snipingRateMs) return
+        if (this.timeSinceSnipe < this.fireRateMs) return
         
         const target = this.findFarthestTarget(enemies)
         if (!target) return
@@ -45,7 +44,7 @@ export class SnipingTower extends Tower {
                 enemy.sprite.y
             )
             
-            if (distance <= this.snipingRange && distance > farthestDist) {
+            if (distance <= this.range && distance > farthestDist) {
                 farthestDist = distance
                 farthest = enemy
             }
@@ -55,7 +54,7 @@ export class SnipingTower extends Tower {
     }
 
     private snipe(target: Enemy): void {
-        target.takeDamage(this.snipingDamage)
+        target.takeDamage(this.damage)
         
         this.showLaserEffect(target)
         

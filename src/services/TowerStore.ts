@@ -1,7 +1,16 @@
 import Phaser from 'phaser'
+import {Tower} from "@src/entities/Towers/Tower";
+
+export enum TowerTypeID {
+    BASIC = 'basic',
+    SNIPER = 'sniper',
+    RAPID = 'rapid',
+    AOE = 'aoe',
+    CHAIN = 'chain'
+}
 
 export interface TowerType {
-    id: string
+    id: TowerTypeID
     name: string
     key: string
     cost: number
@@ -14,7 +23,7 @@ export interface TowerType {
 
 export class TowerStore {
     private static instance: TowerStore
-    private towerTypes: Map<string, TowerType> = new Map()
+    private towerTypes: Map<TowerTypeID, TowerType> = new Map()
 
     private constructor() {
         this.initializeTowerTypes()
@@ -30,36 +39,58 @@ export class TowerStore {
     private initializeTowerTypes(): void {
         const types: TowerType[] = [
             {
-                id: 'basic',
+                id: TowerTypeID.BASIC,
                 name: 'Basic Tower',
-                key: 'E',
-                cost: 50,
+                key: '5',
+                cost: 10,
                 range: 1000,
                 fireRateMs: 200,
-                damage: 400,
+                damage: 50,
                 color: 0x2ed573,
-                description: 'Balanced tower with moderate damage and fire rate'
+                description: 'Balanced tower with moderate damage and fire rate',
             },
             {
-                id: 'sniper',
+                id: TowerTypeID.SNIPER,
                 name: 'Sniper Tower',
-                key: 'R',
-                cost: 100,
-                range: 1500,
-                fireRateMs: 800,
+                key: '4',
+                cost: 200,
+                range: 1200,
+                fireRateMs: 3000,
                 damage: 1200,
                 color: 0x5f27cd,
                 description: 'Long range, high damage, slow fire rate'
             },
             {
-                id: 'rapid',
-                name: 'Rapid Tower',
-                key: 'T',
-                cost: 75,
-                range: 700,
-                fireRateMs: 80,
-                damage: 150,
+                id: TowerTypeID.AOE,
+                name: 'AOE Tower',
+                key: '3',
+                cost: 150,
+                range: 140,
+                fireRateMs: 2000,
+                damage: 500,
                 color: 0xff6348,
+                description: 'creates a large area of damage'
+            },
+            {
+                id: TowerTypeID.CHAIN,
+                name: 'Chain Explosion Tower',
+                key: '2',
+                cost: 250,
+                range: 800,
+                fireRateMs: 400,
+                damage: 300,
+                color: 0xefcc00,
+                description: 'triggers a chain of explosions'
+            },
+            {
+                id: TowerTypeID.RAPID,
+                name: 'Rapid Fire Tower',
+                key: '1',
+                cost: 150,
+                range: 80,
+                fireRateMs: 2,
+                damage: 100,
+                color: 0x2205ff,
                 description: 'Short range, fast fire rate, low damage'
             }
         ]
@@ -69,7 +100,7 @@ export class TowerStore {
         })
     }
 
-    public getTowerType(id: string): TowerType | undefined {
+    public getTowerType(id: TowerTypeID): TowerType | undefined {
         return this.towerTypes.get(id)
     }
 
