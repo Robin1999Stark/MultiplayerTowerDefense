@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { GAME_EVENTS } from './GameScene'
-import { TowerStore, TowerType } from '../services/TowerStore'
+import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 
 export class UIScene extends Phaser.Scene {
 	static KEY = 'UIScene'
@@ -16,6 +16,15 @@ export class UIScene extends Phaser.Scene {
 	constructor() {
 		super(UIScene.KEY)
 		this.towerStore = TowerStore.getInstance()
+	}
+
+	preload(): void {
+		// Load tower images for UI display
+		this.load.image('tower_basic', 'assets/towers/tower_basic.png')
+		this.load.image('tower_laser', 'assets/towers/tower_laser.png')
+		this.load.image('tower_rapid', 'assets/towers/tower_rapid.png')
+		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
+		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
 	}
 
 	create(): void {
@@ -132,8 +141,31 @@ export class UIScene extends Phaser.Scene {
 		cardContainer.add(keyText)
 
 		// Tower preview sprite
-		const towerSprite = this.add.sprite(-width / 2, 30, `tower_${towerType.id}`)
-		towerSprite.setScale(0.6)
+		let textureKey = 'tower_basic'
+		let scale = 0.15 // Much smaller scale for UI cards
+		switch (towerType.id) {
+			case TowerTypeID.SNIPER:
+				textureKey = 'tower_laser'
+				scale = 0.15
+				break
+			case TowerTypeID.RAPID:
+				textureKey = 'tower_rapid'
+				scale = 0.15
+				break
+			case TowerTypeID.CHAIN:
+				textureKey = 'tower_rapid_fire'
+				scale = 0.15
+				break
+			case TowerTypeID.AOE:
+				textureKey = 'tower_explosive'
+				scale = 0.15
+				break
+			default:
+				textureKey = 'tower_basic'
+				scale = 0.15
+		}
+		const towerSprite = this.add.sprite(-width / 2, 30, textureKey)
+		towerSprite.setScale(scale)
 		cardContainer.add(towerSprite)
 
 		// Tower name (shorter version)
