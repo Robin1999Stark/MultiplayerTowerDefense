@@ -211,6 +211,9 @@ export class GameScene extends Phaser.Scene {
 			tower.update(delta, this.enemies)
 		}
 
+		// Sort towers by Y position for proper depth ordering
+		this.sortTowersByDepth()
+
 		// End wave if no enemies remaining and no more to spawn
 		if (this.enemies.length === 0 && this.spawnTimer && this.spawnTimer.getRepeatCount() === 0 && this.spawnTimer.getProgress() === 1) {
 			// Delay then start next wave
@@ -285,6 +288,16 @@ export class GameScene extends Phaser.Scene {
 
 		// Emit event for UI update
 		this.game.events.emit(GAME_EVENTS.towerTypeSelected, null)
+	}
+
+	private sortTowersByDepth(): void {
+		// Sort towers by Y position (higher Y = further back)
+		this.towers.sort((a, b) => a.sprite.y - b.sprite.y)
+		
+		// Update depth based on sorted order
+		this.towers.forEach((tower, index) => {
+			tower.sprite.setDepth(2 + index * 0.001) // Start at depth 2, increment by small amounts
+		})
 	}
 
 	private startWave(wave: number): void {
