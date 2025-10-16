@@ -1,7 +1,6 @@
 import Phaser from 'phaser'
 import { Enemy } from '../entities/Enemy'
 import { Tower } from '../entities/Towers/Tower'
-import { RapidFireTower } from '../entities/Towers/RapidFireTower'
 import { Boss } from '../entities/Boss'
 import { PathGenerator } from './PathGenerator'
 
@@ -99,7 +98,7 @@ export class GameScene extends Phaser.Scene {
 			if (this.gold < towerCost) return
 			this.gold -= towerCost
 			this.emitGold()
-			const tower = new RapidFireTower(this, position.x, position.y)
+			const tower = new Tower(this, position.x, position.y)
 			this.towers.push(tower)
             this.game.events.emit(GAME_EVENTS.towerBuilt)
         })
