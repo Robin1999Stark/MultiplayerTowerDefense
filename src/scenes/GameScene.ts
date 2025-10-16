@@ -152,7 +152,7 @@ export class GameScene extends Phaser.Scene {
 		for (const enemy of [...this.enemies]) {
 			enemy.update(delta, this.pathPoints)
 			if (enemy.isDead()) {
-				const isBoss = (enemy as any).sprite.texture.key === 'orc_warrior'
+				const isBoss = enemy.sprite.texture.key === 'orc_warrior'
 				this.gold += isBoss ? 100 : 10
 				this.emitGold()
 				this.playPlop()

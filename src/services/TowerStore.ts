@@ -1,5 +1,4 @@
 import Phaser from 'phaser'
-import {Tower} from "@src/entities/Towers/Tower";
 
 export enum TowerTypeID {
     BASIC = 'basic',
