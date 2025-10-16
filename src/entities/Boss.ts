@@ -13,7 +13,7 @@ export class Boss extends Enemy {
 
         if (!start) return;
 
-        const bossHp = 6000 + wave * 60;
+        const bossHp = 60000 + wave * 60;
         const bossSpeed = 10 + Math.floor(wave * 1.5);
         const boss = new Boss(scene, start.x, start.y, bossHp, bossSpeed);
 

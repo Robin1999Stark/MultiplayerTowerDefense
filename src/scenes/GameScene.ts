@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { Enemy } from '../entities/Enemy'
-import { Tower } from '../entities/Tower'
+import { Tower } from '../entities/Towers/Tower'
+import { RapidFireTower } from '../entities/Towers/RapidFireTower'
 import { Boss } from '../entities/Boss'
 import { PathGenerator } from './PathGenerator'
 
@@ -46,11 +47,17 @@ export class GameScene extends Phaser.Scene {
 		g.fillStyle(0xffff00, 1)
 		g.fillCircle(32, 32, 32)
 		g.generateTexture('boss', 64, 64)
-		// Tower texture
+		
+		// AOE Tower texture
 		g.clear()
-		g.fillStyle(0x2ed573, 1)
+		g.fillStyle(0x00ffff, 1)
 		g.fillRoundedRect(0, 0, 32, 32, 6)
-		g.generateTexture('tower', 32, 32)
+		g.generateTexture('aoe-tower', 32, 32)
+		// RapidFire Tower texture
+		g.clear()
+		g.fillStyle(0xff9900, 1)
+		g.fillRoundedRect(0, 0, 32, 32, 16)
+		g.generateTexture('rapid-fire-tower', 32, 32)
 		// Bullet texture
 		g.clear()
 		g.fillStyle(0xffffff, 1)
@@ -92,7 +99,7 @@ export class GameScene extends Phaser.Scene {
 			if (this.gold < towerCost) return
 			this.gold -= towerCost
 			this.emitGold()
-			const tower = new Tower(this, position.x, position.y)
+			const tower = new RapidFireTower(this, position.x, position.y)
 			this.towers.push(tower)
             this.game.events.emit(GAME_EVENTS.towerBuilt)
         })
