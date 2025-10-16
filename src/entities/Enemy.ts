@@ -7,6 +7,7 @@ export class Enemy {
 	public speed: number
 	public reachedEnd = false
 	private pathIndex = 0
+	private walkTime = 0
 
 	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number, textureKey: string = 'orc_grunt', radius: number = 16) {
 		this.sprite = scene.physics.add.sprite(x, y, textureKey)
@@ -20,6 +21,7 @@ export class Enemy {
 	update(deltaMs: number, path: Phaser.Math.Vector2[]): void {
 		if (this.reachedEnd) return
 		const dt = deltaMs / 1000
+		this.walkTime += dt * 10
 		const pos = new Phaser.Math.Vector2(this.sprite.x, this.sprite.y)
 		const target = path[this.pathIndex + 1]
 		if (!target) {
@@ -35,6 +37,10 @@ export class Enemy {
 		}
 		dir.normalize()
 		this.sprite.setVelocity(dir.x * this.speed, dir.y * this.speed)
+
+		// Add a slight back-and-forth rotation to simulate walking
+		const rotationAmplitude = 0.12 // radians (~7 degrees)
+		this.sprite.setRotation(Math.sin(this.walkTime) * rotationAmplitude)
 	}
 
 	takeDamage(amount: number): void {
