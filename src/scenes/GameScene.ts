@@ -45,9 +45,6 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	preload(): void {
-		// Start additional scenes
-		this.scene.launch('UIScene');
-		this.scene.launch('StatisticsScene');
 
 		// Load external assets
 		this.load.image('orc_grunt', 'assets/units/orc_grunt.png')

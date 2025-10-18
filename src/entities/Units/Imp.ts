@@ -5,7 +5,7 @@ import { GameScene } from '@scenes/GameScene'
 export class Imp extends OrcGrunt {
 	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number) {
 		super(scene, x, y, hp, speed, 'imp', 14)
-		this.sprite.setScale(0.04)
+		this.sprite.setScale(0.03)
 	}
 
 	static override spawn(scene: GameScene, wave: number): void {

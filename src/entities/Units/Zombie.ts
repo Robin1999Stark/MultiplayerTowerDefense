@@ -5,7 +5,7 @@ import { GameScene } from '@scenes/GameScene'
 export class Zombie extends OrcGrunt {
 	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number) {
 		super(scene, x, y, hp, speed, 'zombie', 18)
-		this.sprite.setScale(0.05)
+		this.sprite.setScale(0.07)
 	}
 
 	static override spawn(scene: GameScene, wave: number): void {
