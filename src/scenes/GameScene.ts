@@ -57,6 +57,7 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('skeleton', 'assets/units/skeleton.png')
 		this.load.image('unicorn', 'assets/units/unicorn.png')
 		this.load.image('zombie', 'assets/units/zombie.png')
+		this.load.image('castle', 'assets/castle.png')
 		this.load.image('tower_basic', 'assets/towers/tower_basic.png')
 		this.load.image('tower_laser', 'assets/towers/tower_laser.png')
 		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
@@ -143,6 +144,15 @@ export class GameScene extends Phaser.Scene {
 			maskGfx.setVisible(false)
 		}
 
+		// Add castle at the end of the path
+		if (this.pathPoints.length > 0) {
+			const endPoint = this.pathPoints[this.pathPoints.length - 1]!
+			const castle = this.add.image(endPoint.x - 40, endPoint.y - 43, 'castle')
+			castle.setScale(0.15) // Scale down the castle to fit the game
+			castle.setOrigin(0.5, 0.5)
+			castle.setDepth(10) // Place castle above path but below towers
+		}
+
 		// Subscribe to UI toggle for placing towers (deprecated, keeping for backwards compatibility)
 		this.game.events.on(GAME_EVENTS.placeTowerToggle, this.onPlaceTowerToggle, this)
 
@@ -212,6 +222,25 @@ export class GameScene extends Phaser.Scene {
 				this.removeEnemy(enemy)
 				continue
 			}
+			
+			// Check if enemy is close to castle (within 50 pixels of castle position)
+			if (this.pathPoints.length > 0) {
+				const endPoint = this.pathPoints[this.pathPoints.length - 1]!
+				const castleX = endPoint.x - 40
+				const castleY = endPoint.y - 43
+				const distanceToCastle = Phaser.Math.Distance.Between(
+					enemy.sprite.x, enemy.sprite.y, 
+					castleX, castleY
+				)
+				
+				if (distanceToCastle < 50) {
+					this.lives -= 1
+					this.emitLives()
+					this.removeEnemy(enemy)
+					continue
+				}
+			}
+			
 			if (enemy.reachedEnd) {
 				this.lives -= 1
 				this.emitLives()
