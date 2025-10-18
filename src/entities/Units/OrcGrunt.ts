@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import {GameScene} from "@scenes/GameScene";
 
-export class Enemy {
+export class OrcGrunt {
 	public sprite: Phaser.Physics.Arcade.Sprite
 	public hp: number
 	public speed: number

@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { Enemy } from '../Enemy'
+import { OrcGrunt } from '../Units/OrcGrunt'
 import { Tower } from './Tower'
 import { TowerType } from "../../services/TowerStore";
 
@@ -20,7 +20,7 @@ export class SnipingTower extends Tower {
         this.laserEffect.setDepth(3)
     }
 
-    override update(deltaMs: number, enemies: Enemy[]): void {
+    override update(deltaMs: number, enemies: OrcGrunt[]): void {
         // Don't call super.update() as we want our own sniping behavior
         
         this.timeSinceSnipe += deltaMs
@@ -33,8 +33,8 @@ export class SnipingTower extends Tower {
         this.snipe(target)
     }
 
-    private findFarthestTarget(enemies: Enemy[]): Enemy | undefined {
-        let farthest: Enemy | undefined
+    private findFarthestTarget(enemies: OrcGrunt[]): OrcGrunt | undefined {
+        let farthest: OrcGrunt | undefined
         let farthestDist = 0
         
         for (const enemy of enemies) {
@@ -54,7 +54,7 @@ export class SnipingTower extends Tower {
         return farthest
     }
 
-    private snipe(target: Enemy): void {
+    private snipe(target: OrcGrunt): void {
         target.takeDamage(this.damage)
         
         this.showLaserEffect(target)
@@ -62,7 +62,7 @@ export class SnipingTower extends Tower {
         this.playSnipeSound()
     }
 
-    private showLaserEffect(target: Enemy): void {
+    private showLaserEffect(target: OrcGrunt): void {
         if (!this.laserEffect) return
         
         this.laserEffect.clear()

@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
-import {Enemy} from '../entities/Enemy'
-import {Boss} from '../entities/Boss'
+import {OrcGrunt} from '../entities/Units/OrcGrunt'
+import {OrcWarrior} from '../entities/Units/OrcWarrior'
 import {PathGenerator} from './PathGenerator'
 import {TowerStore, TowerType, TowerTypeID} from '../services/TowerStore'
 import {Tower} from "../entities/Towers/Tower";
@@ -19,7 +19,7 @@ export const GAME_EVENTS = {
 export class GameScene extends Phaser.Scene {
 	static KEY = 'GameScene'
 
-	enemies: Enemy[] = []
+	enemies: OrcGrunt[] = []
 	pathPoints: Phaser.Math.Vector2[] = []
     private towers: Tower[] = []
 	private spawnTimer?: Phaser.Time.TimerEvent | undefined
@@ -55,12 +55,12 @@ export class GameScene extends Phaser.Scene {
 
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
-		// Enemy texture
+		// OrcGrunt texture
 		g.clear()
 		g.fillStyle(0xff4757, 1)
 		g.fillCircle(16, 16, 16)
 		g.generateTexture('enemy', 32, 32)
-		// Boss texture (larger, yellow circle)
+		// OrcWarrior texture (larger, yellow circle)
 		g.clear()
 		g.fillStyle(0xffff00, 1)
 		g.fillCircle(32, 32, 32)
@@ -301,9 +301,9 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private startWave(wave: number): void {
-		// Boss every 5th wave
+		// OrcWarrior every 5th wave
 		if (wave % 5 === 0) {
-            Boss.spawn(this, wave);
+            OrcWarrior.spawn(this, wave);
 			return
 		}
 
@@ -314,12 +314,12 @@ export class GameScene extends Phaser.Scene {
 			delay: 400,
 			repeat: count - 1,
 			callback: () => {
-                Enemy.spawn(this, wave);
+                OrcGrunt.spawn(this, wave);
             },
 		})
 	}
 
-	private removeEnemy(enemy: Enemy): void {
+	private removeEnemy(enemy: OrcGrunt): void {
 
 		const idx = this.enemies.indexOf(enemy)
 		if (idx >= 0) {
@@ -338,7 +338,7 @@ export class GameScene extends Phaser.Scene {
 		enemy.destroy()
 	}
 
-	private flingEnemyOffscreen(enemy: Enemy): void {
+	private flingEnemyOffscreen(enemy: OrcGrunt): void {
 		// Disable physics and fling the sprite offscreen with a spin, then destroy
 		enemy.sprite.setVelocity(0, 0)
 		const body = enemy.sprite.body as Phaser.Physics.Arcade.Body | null | undefined

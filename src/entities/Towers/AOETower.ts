@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { Enemy } from '../Enemy'
+import { OrcGrunt } from '../Units/OrcGrunt'
 import { Tower } from './Tower'
 import { TowerType } from "../../services/TowerStore";
 
@@ -22,7 +22,7 @@ export class AOETower extends Tower {
         this.aoeEffect.setDepth(1) // Below enemies but above the path
     }
 
-    override update(deltaMs: number, enemies: Enemy[]): void {
+    override update(deltaMs: number, enemies: OrcGrunt[]): void {
         // Don't call super.update() as we don't want the default shooting behavior
         
         this.timeSinceAOE += deltaMs
@@ -36,8 +36,8 @@ export class AOETower extends Tower {
         this.triggerAOE(enemiesInRange)
     }
 
-    private findEnemiesInRange(enemies: Enemy[]): Enemy[] {
-        const inRange: Enemy[] = []
+    private findEnemiesInRange(enemies: OrcGrunt[]): OrcGrunt[] {
+        const inRange: OrcGrunt[] = []
         for (const enemy of enemies) {
             const distance = Phaser.Math.Distance.Between(
                 this.sprite.x, 
@@ -52,7 +52,7 @@ export class AOETower extends Tower {
         return inRange
     }
 
-    private triggerAOE(enemies: Enemy[]): void {
+    private triggerAOE(enemies: OrcGrunt[]): void {
         // Apply damage to all enemies in range
         for (const enemy of enemies) {
             enemy.takeDamage(this.damage)

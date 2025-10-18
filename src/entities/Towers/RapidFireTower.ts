@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { Enemy } from '../Enemy'
+import { OrcGrunt } from '../Units/OrcGrunt'
 import { Tower } from './Tower'
 import { TowerType } from "../../services/TowerStore";
 
@@ -20,7 +20,7 @@ export class RapidFireTower extends Tower {
         this.bulletEffect.setDepth(3)
     }
 
-    override update(deltaMs: number, enemies: Enemy[]): void {
+    override update(deltaMs: number, enemies: OrcGrunt[]): void {
         // Don't call super.update() as we want our own rapid fire behavior
 
         this.timeSinceShot += deltaMs
@@ -33,8 +33,8 @@ export class RapidFireTower extends Tower {
         this.rapidFire(target)
     }
 
-    private findClosestTarget(enemies: Enemy[]): Enemy | undefined {
-        let closest: Enemy | undefined
+    private findClosestTarget(enemies: OrcGrunt[]): OrcGrunt | undefined {
+        let closest: OrcGrunt | undefined
         let closestDist = Number.POSITIVE_INFINITY
         
         for (const enemy of enemies) {
@@ -55,7 +55,7 @@ export class RapidFireTower extends Tower {
         return closest
     }
 
-    private rapidFire(target: Enemy): void {
+    private rapidFire(target: OrcGrunt): void {
         target.takeDamage(this.damage)
         
         this.showBulletEffect(target)
@@ -63,7 +63,7 @@ export class RapidFireTower extends Tower {
         this.playRapidFireSound()
     }
 
-    private showBulletEffect(target: Enemy): void {
+    private showBulletEffect(target: OrcGrunt): void {
         if (!this.bulletEffect) return
         
         this.bulletEffect.clear()

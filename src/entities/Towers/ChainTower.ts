@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { Enemy } from '../Enemy'
+import { OrcGrunt } from '../Units/OrcGrunt'
 import { Tower } from './Tower'
 import { TowerType } from "../../services/TowerStore";
 
@@ -22,7 +22,7 @@ export class ChainTower extends Tower {
         this.bulletEffect.setDepth(3)
     }
 
-    override update(deltaMs: number, enemies: Enemy[]): void {
+    override update(deltaMs: number, enemies: OrcGrunt[]): void {
         // Don't call super.update() as we want our own chain behavior
         
         this.timeSinceShot += deltaMs
@@ -35,8 +35,8 @@ export class ChainTower extends Tower {
         this.fireChainProjectile(target, enemies, this.chainReactions)
     }
 
-    private findClosestTarget(enemies: Enemy[]): Enemy | undefined {
-        let closest: Enemy | undefined
+    private findClosestTarget(enemies: OrcGrunt[]): OrcGrunt | undefined {
+        let closest: OrcGrunt | undefined
         let closestDist = Number.POSITIVE_INFINITY
         
         for (const enemy of enemies) {
@@ -56,7 +56,7 @@ export class ChainTower extends Tower {
         return closest
     }
 
-    private fireChainProjectile(target: Enemy, enemies: Enemy[], reactionsLeft: number): void {
+    private fireChainProjectile(target: OrcGrunt, enemies: OrcGrunt[], reactionsLeft: number): void {
         if (reactionsLeft <= 0) return
         
         const scene = this.sprite.scene
@@ -98,8 +98,8 @@ export class ChainTower extends Tower {
         })
     }
     
-    private findNextChainTarget(currentTarget: Enemy, enemies: Enemy[]): Enemy | undefined {
-        let closest: Enemy | undefined
+    private findNextChainTarget(currentTarget: OrcGrunt, enemies: OrcGrunt[]): OrcGrunt | undefined {
+        let closest: OrcGrunt | undefined
         let closestDist = Number.POSITIVE_INFINITY
         
         for (const enemy of enemies) {
@@ -119,7 +119,7 @@ export class ChainTower extends Tower {
         return closest
     }
     
-    private chainToNextTarget(sourceTarget: Enemy, nextTarget: Enemy, enemies: Enemy[], reactionsLeft: number): void {
+    private chainToNextTarget(sourceTarget: OrcGrunt, nextTarget: OrcGrunt, enemies: OrcGrunt[], reactionsLeft: number): void {
         const scene = this.sprite.scene
         
         // Create a chain lightning effect between targets

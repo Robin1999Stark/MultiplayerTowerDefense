@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { Enemy } from '../Enemy'
+import { OrcGrunt } from '../Units/OrcGrunt'
 import { TowerType } from '../../services/TowerStore'
 
 export class Tower {
@@ -22,7 +22,7 @@ export class Tower {
 		this.sprite.setScale(0.08)
 	}
 
-	update(deltaMs: number, enemies: Enemy[]): void {
+	update(deltaMs: number, enemies: OrcGrunt[]): void {
 		this.timeSinceShot += deltaMs
 		if (this.timeSinceShot < this.fireRateMs) return
 		const target = this.findTarget(enemies)
@@ -31,8 +31,8 @@ export class Tower {
 		this.shoot(target)
 	}
 
-	private findTarget(enemies: Enemy[]): Enemy | undefined {
-		let nearest: Enemy | undefined
+	private findTarget(enemies: OrcGrunt[]): OrcGrunt | undefined {
+		let nearest: OrcGrunt | undefined
 		let nearestDist = Number.POSITIVE_INFINITY
 		for (const e of enemies) {
 			const d = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, e.sprite.x, e.sprite.y)
@@ -44,7 +44,7 @@ export class Tower {
 		return nearest
 	}
 
-	private shoot(target: Enemy): void {
+	private shoot(target: OrcGrunt): void {
 		// Audio blip for the shot
 		this.playShootTone()
 
