@@ -23,64 +23,83 @@ export class StatisticsScene extends Scene {
 
     preload() {
         console.log('StatisticsScene preload called');
+        this.load.image('gold', 'assets/gold.png');
+        this.load.image('skull', 'assets/skull.png');
+        this.load.image('tower', 'assets/towers/tower_basic.png');
     }
 
     create() {
         console.log('StatisticsScene created');
         this.uiScene = this.scene.get('UIScene') as UIScene;
 
-        // Panel für Statistiken erstellen
-        const padding = 10;
-        const panelBg = this.add.rectangle(
-            this.cameras.main.width - 200 - padding,
-            padding,
-            200,
-            120,
+        // Position in upper left corner
+        const padding = 15;
+        const startX = padding;
+        const startY = padding;
+        const spacing = 80; // Horizontal spacing between statistics
+
+        // Create semi-transparent black background panel
+        const panelWidth = spacing * 4 + 50; // Width to cover all statistics
+        const panelHeight = 35; // Height to cover icons and text
+        const backgroundPanel = this.add.rectangle(
+            startX - 5,
+            startY - 5,
+            panelWidth,
+            panelHeight,
             0x000000,
-            0.3
-        )
-            .setOrigin(0, 0)
-            .setStrokeStyle(1, 0xffffff, 0.2);
+            0.6
+        );
+        backgroundPanel.setOrigin(0, 0);
+        backgroundPanel.setStrokeStyle(1, 0x333333, 0.8);
 
         const textStyle = { 
             color: '#ffffff',
-            fontSize: '14px',
-            align: 'left'
+            fontSize: '16px',
+            fontFamily: 'monospace',
+            fontStyle: 'bold'
         };
 
-        // Statistik-Texte erstellen
-        const startX = panelBg.x + 10;
-        let currentY = panelBg.y + 10;
-        const lineHeight = 25;
+        // Gold statistic (with icon)
+        const goldIcon = this.add.image(startX, startY, 'gold');
+        goldIcon.setScale(0.15);
+        goldIcon.setOrigin(0, 0);
 
         this.statistics['totalGold'] = this.add.text(
-            startX,
-            currentY,
-            'Total Gold: 0',
+            startX + 25,
+            startY + 2,
+            '100',
             textStyle
         );
-        currentY += lineHeight;
 
-        this.statistics['towersBuilt'] = this.add.text(
-            startX,
-            currentY,
-            'Towers Built: 0',
-            textStyle
-        );
-        currentY += lineHeight;
+        // Enemies killed statistic (with skull icon)
+        const skullIcon = this.add.image(startX + spacing, startY, 'skull');
+        skullIcon.setScale(0.03);
+        skullIcon.setOrigin(0, 0);
 
         this.statistics['enemiesKilled'] = this.add.text(
-            startX,
-            currentY,
-            'Enemies Killed: 0',
+            startX + spacing + 25,
+            startY + 2,
+            '0',
             textStyle
         );
-        currentY += lineHeight;
 
+        // Towers built statistic
+        const towerIcon = this.add.image(startX + spacing * 2, startY, 'tower');
+        towerIcon.setScale(0.04);
+        towerIcon.setOrigin(0, 0);
+
+        this.statistics['towersBuilt'] = this.add.text(
+            startX + spacing * 2 + 25,
+            startY + 2,
+            '0',
+            textStyle
+        );
+
+        // Waves completed statistic
         this.statistics['wavesCompleted'] = this.add.text(
-            startX,
-            currentY,
-            'Waves Completed: 0',
+            startX + spacing * 3,
+            startY + 2,
+            'Wave: 0',
             textStyle
         );
 
@@ -94,15 +113,21 @@ export class StatisticsScene extends Scene {
     }
 
     updateStatistic(key: string, value: number) {
-        const statisticLabels: { [key: string]: string } = {
-            totalGold: 'Total Gold',
-            towersBuilt: 'Towers Built',
-            enemiesKilled: 'Enemies Killed',
-            wavesCompleted: 'Waves Completed'
-        };
-
         if (this.statistics[key]) {
-            this.statistics[key].setText(`${statisticLabels[key]}: ${value}`);
+            switch (key) {
+                case 'totalGold':
+                    this.statistics[key].setText(String(value));
+                    break;
+                case 'enemiesKilled':
+                    this.statistics[key].setText(String(value));
+                    break;
+                case 'towersBuilt':
+                    this.statistics[key].setText(String(value));
+                    break;
+                case 'wavesCompleted':
+                    this.statistics[key].setText(`Wave: ${value}`);
+                    break;
+            }
         }
     }
 
