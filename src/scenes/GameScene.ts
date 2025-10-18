@@ -1,6 +1,14 @@
 import Phaser from 'phaser'
 import {OrcGrunt} from '../entities/Units/OrcGrunt'
 import {OrcWarrior} from '../entities/Units/OrcWarrior'
+import {Berserker} from '../entities/Units/Berserker'
+import {Chonkers} from '../entities/Units/Chonkers'
+import {Cultist} from '../entities/Units/Cultist'
+import {Demon} from '../entities/Units/Demon'
+import {Imp} from '../entities/Units/Imp'
+import {Skeleton} from '../entities/Units/Skeleton'
+import {Unicorn} from '../entities/Units/Unicorn'
+import {Zombie} from '../entities/Units/Zombie'
 import {PathGenerator} from './PathGenerator'
 import {TowerStore, TowerType, TowerTypeID} from '../services/TowerStore'
 import {Tower} from "../entities/Towers/Tower";
@@ -19,7 +27,7 @@ export const GAME_EVENTS = {
 export class GameScene extends Phaser.Scene {
 	static KEY = 'GameScene'
 
-	enemies: OrcGrunt[] = []
+	enemies: (OrcGrunt | OrcWarrior | Berserker | Chonkers | Cultist | Demon | Imp | Skeleton | Unicorn | Zombie)[] = []
 	pathPoints: Phaser.Math.Vector2[] = []
     private towers: Tower[] = []
 	private spawnTimer?: Phaser.Time.TimerEvent | undefined
@@ -44,6 +52,14 @@ export class GameScene extends Phaser.Scene {
 		// Load external assets
 		this.load.image('orc_grunt', 'assets/units/orc_grunt.png')
 		this.load.image('orc_warrior', 'assets/units/orc_warrior.png')
+		this.load.image('berserker', 'assets/units/berserker.png')
+		this.load.image('chonkers', 'assets/units/chonkers.png')
+		this.load.image('cultist', 'assets/units/cultist.png')
+		this.load.image('demon', 'assets/units/demon.png')
+		this.load.image('imp', 'assets/units/imp.png')
+		this.load.image('skeleton', 'assets/units/skeleton.png')
+		this.load.image('unicorn', 'assets/units/unicorn.png')
+		this.load.image('zombie', 'assets/units/zombie.png')
 		this.load.image('tower_basic', 'assets/towers/tower_basic.png')
 		this.load.image('tower_laser', 'assets/towers/tower_laser.png')
 		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
@@ -314,12 +330,31 @@ export class GameScene extends Phaser.Scene {
 			delay: 400,
 			repeat: count - 1,
 			callback: () => {
-                OrcGrunt.spawn(this, wave);
+				this.spawnRandomEnemy(wave);
             },
 		})
 	}
 
-	private removeEnemy(enemy: OrcGrunt): void {
+	private spawnRandomEnemy(wave: number): void {
+		const enemyTypes = [
+			OrcGrunt,
+			Berserker,
+			Chonkers,
+			Cultist,
+			Demon,
+			Imp,
+			Skeleton,
+			Unicorn,
+			Zombie
+		]
+		
+		const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)]
+		if (randomType) {
+			randomType.spawn(this, wave)
+		}
+	}
+
+	private removeEnemy(enemy: OrcGrunt | OrcWarrior | Berserker | Chonkers | Cultist | Demon | Imp | Skeleton | Unicorn | Zombie): void {
 
 		const idx = this.enemies.indexOf(enemy)
 		if (idx >= 0) {
@@ -338,7 +373,7 @@ export class GameScene extends Phaser.Scene {
 		enemy.destroy()
 	}
 
-	private flingEnemyOffscreen(enemy: OrcGrunt): void {
+	private flingEnemyOffscreen(enemy: OrcGrunt | OrcWarrior | Berserker | Chonkers | Cultist | Demon | Imp | Skeleton | Unicorn | Zombie): void {
 		// Disable physics and fling the sprite offscreen with a spin, then destroy
 		enemy.sprite.setVelocity(0, 0)
 		const body = enemy.sprite.body as Phaser.Physics.Arcade.Body | null | undefined
