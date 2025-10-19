@@ -1,27 +1,28 @@
 import Phaser from 'phaser'
-import {OrcGrunt} from '../entities/Units/OrcGrunt'
-import {OrcWarrior} from '../entities/Units/OrcWarrior'
-import {Berserker} from '../entities/Units/Berserker'
-import {Chonkers} from '../entities/Units/Chonkers'
-import {Cultist} from '../entities/Units/Cultist'
-import {Demon} from '../entities/Units/Demon'
-import {Imp} from '../entities/Units/Imp'
-import {Skeleton} from '../entities/Units/Skeleton'
-import {Unicorn} from '../entities/Units/Unicorn'
-import {Zombie} from '../entities/Units/Zombie'
-import {PathGenerator} from './PathGenerator'
-import {TowerStore, TowerType, TowerTypeID} from '../services/TowerStore'
-import {Tower} from "../entities/Towers/Tower";
-import {TowerFactory} from "../entities/Towers/TowerFactory";
+import { OrcGrunt } from '../entities/Units/OrcGrunt'
+import { OrcWarrior } from '../entities/Units/OrcWarrior'
+import { Berserker } from '../entities/Units/Berserker'
+import { Chonkers } from '../entities/Units/Chonkers'
+import { Cultist } from '../entities/Units/Cultist'
+import { Demon } from '../entities/Units/Demon'
+import { Imp } from '../entities/Units/Imp'
+import { Skeleton } from '../entities/Units/Skeleton'
+import { Unicorn } from '../entities/Units/Unicorn'
+import { Zombie } from '../entities/Units/Zombie'
+import { PathGenerator } from './PathGenerator'
+import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
+import { Tower } from "../entities/Towers/Tower";
+import { TowerFactory } from "../entities/Towers/TowerFactory";
 
 export const GAME_EVENTS = {
-    placeTowerToggle: 'ui.placeTowerToggle',
-    goldChanged: 'game.goldChanged',
-    livesChanged: 'game.livesChanged',
-    waveChanged: 'game.waveChanged',
-    enemyKilled: 'game.enemyKilled',
+	placeTowerToggle: 'ui.placeTowerToggle',
+	goldChanged: 'game.goldChanged',
+	livesChanged: 'game.livesChanged',
+	waveChanged: 'game.waveChanged',
+	enemyKilled: 'game.enemyKilled',
 	towerBuilt: 'game.towerBuilt',
-	towerTypeSelected: 'game.towerTypeSelected'
+	towerTypeSelected: 'game.towerTypeSelected',
+	towerUpgraded: 'game.towerUpgraded',
 } as const
 
 export class GameScene extends Phaser.Scene {
@@ -29,15 +30,17 @@ export class GameScene extends Phaser.Scene {
 
 	enemies: (OrcGrunt | OrcWarrior | Berserker | Chonkers | Cultist | Demon | Imp | Skeleton | Unicorn | Zombie)[] = []
 	pathPoints: Phaser.Math.Vector2[] = []
-    private towers: Tower[] = []
+	private towers: Tower[] = []
 	private spawnTimer?: Phaser.Time.TimerEvent | undefined
-    private isPlacingTower = false
-    private gold = 100
-    private lives = 20
-    private wave = 1
-    private towerStore: TowerStore
-    private selectedTowerType: TowerType | null = null
-    private ghostTower?: Phaser.GameObjects.Sprite | undefined
+	private isPlacingTower = false
+	private gold = 100
+	private lives = 20
+	private wave = 1
+	private towerStore: TowerStore
+	private selectedTowerType: TowerType | null = null
+	private ghostTower?: Phaser.GameObjects.Sprite | undefined
+
+	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
 
 	constructor() {
 		super(GameScene.KEY)
@@ -67,6 +70,8 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('arrow', 'assets/projectiles/arrow.png')
 		this.load.image('background', 'assets/background.jpeg')
 		this.load.image('floor_tile', 'assets/floor_tile.jpeg')
+		this.load.image('upgrade_arrow', 'assets/indicators/upgrade_arrow.png')
+
 
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
@@ -169,6 +174,7 @@ export class GameScene extends Phaser.Scene {
 
 		// Mouse movement for ghost tower preview
 		this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+
 			if (this.ghostTower && this.selectedTowerType) {
 				const position = this.snapToGrid(pointer.worldX, pointer.worldY)
 				this.ghostTower.setPosition(position.x, position.y)
@@ -177,11 +183,20 @@ export class GameScene extends Phaser.Scene {
 				const canPlace = !this.isOnPath(position) && this.gold >= this.selectedTowerType.cost
 				this.ghostTower.setAlpha(canPlace ? 0.6 : 0.3)
 				this.ghostTower.setTint(canPlace ? 0xffffff : 0xff0000)
+				return
 			}
 		})
 
 		// Input to place a tower when in placement mode
 		this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+
+			const clickedTower = this.findTowerAt(pointer.worldX, pointer.worldY)
+			if (clickedTower) {
+				// optional: visuelles Feedback oder Auswahl, aktuell nichts tun
+				return
+			}
+
+			// Nothing under cursor -> if a tower type is selected, try to place
 			if (!this.selectedTowerType) return
 
 			const position = this.snapToGrid(pointer.worldX, pointer.worldY)
@@ -197,10 +212,11 @@ export class GameScene extends Phaser.Scene {
 			this.emitGold()
 			const tower = TowerFactory.createTower(this, position.x, position.y, this.selectedTowerType)
 			this.towers.push(tower)
-            this.game.events.emit(GAME_EVENTS.towerBuilt)
+			this.game.events.emit(GAME_EVENTS.towerBuilt)
 
-			// Keep the same tower type selected for multiple placements
-        })
+			this.createUpgradeIndicator(tower)
+		})
+
 
 		// Start wave spawning
 		this.startWave(this.wave)
@@ -223,17 +239,17 @@ export class GameScene extends Phaser.Scene {
 				this.removeEnemy(enemy)
 				continue
 			}
-			
+
 			// Check if enemy is close to castle (within 50 pixels of castle position)
 			if (this.pathPoints.length > 0) {
 				const endPoint = this.pathPoints[this.pathPoints.length - 1]!
 				const castleX = endPoint.x - 40
 				const castleY = endPoint.y - 43
 				const distanceToCastle = Phaser.Math.Distance.Between(
-					enemy.sprite.x, enemy.sprite.y, 
+					enemy.sprite.x, enemy.sprite.y,
 					castleX, castleY
 				)
-				
+
 				if (distanceToCastle < 50) {
 					this.lives -= 1
 					this.emitLives()
@@ -241,7 +257,7 @@ export class GameScene extends Phaser.Scene {
 					continue
 				}
 			}
-			
+
 			if (enemy.reachedEnd) {
 				this.lives -= 1
 				this.emitLives()
@@ -256,11 +272,11 @@ export class GameScene extends Phaser.Scene {
 
 		// Sort towers by Y position for proper depth ordering
 		this.sortTowersByDepth()
-
+		this.updateUpgradeIndicators()
 		// End wave if no enemies remaining and no more to spawn
 		if (this.enemies.length === 0 && this.spawnTimer && this.spawnTimer.getRepeatCount() === 0 && this.spawnTimer.getProgress() === 1) {
 			// Delay then start next wave
-            this.time.delayedCall(200, () => {
+			this.time.delayedCall(200, () => {
 				this.wave += 1
 				this.emitWave()
 				this.startWave(this.wave)
@@ -272,6 +288,131 @@ export class GameScene extends Phaser.Scene {
 		this.isPlacingTower = enabled
 		this.input.setDefaultCursor(enabled ? 'crosshair' : 'default')
 	}
+
+	private createUpgradeIndicator(tower: Tower): void {
+		if (!tower.canUpgrade()) return
+		if (this.upgradeIndicators.has(tower)) return
+
+		const cost = this.getUpgradeCost(tower)
+
+		// Arrow placed directly above the tower (bottom-center origin)
+		const img = this.add.image(0, 0, 'upgrade_arrow')
+			.setInteractive({ useHandCursor: true })
+			.setDepth(10)
+			.setScale(0.1)
+			.setOrigin(0.5, 1) // bottom-center so it sits above the tower
+
+		// Price text sits to the right of the arrow
+		const priceText = this.add.text(0, 0, `${cost}`, {
+			fontFamily: 'Arial',
+			fontSize: '8px',
+			color: '#ffffff',
+			stroke: '#000000',
+			strokeThickness: 2,
+		}).setOrigin(0, 0.5)
+
+		const margin = 2
+
+		const container = this.add.container(
+			tower.sprite.x,
+			tower.sprite.y - ((tower.sprite.displayHeight) / 2 - 16),
+			[img, priceText]
+		).setDepth(10)
+
+		const arrowH = img.displayHeight
+		const arrowW = img.displayWidth
+		priceText.x = arrowW / 2 + margin
+		priceText.y = -arrowH / 2
+
+		img.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: any) => {
+			if (event && typeof event.stopPropagation === 'function') event.stopPropagation()
+			this.upgradeTower(tower)
+		})
+
+		this.upgradeIndicators.set(tower, container)
+	}
+
+	private removeUpgradeIndicator(tower: Tower): void {
+		const container = this.upgradeIndicators.get(tower)
+		if (!container) return
+
+		const arrow = container.list.find(c => (c as Phaser.GameObjects.Image).texture) as Phaser.GameObjects.Image | undefined
+		if (arrow) arrow.off('pointerdown')
+		container.destroy()
+		this.upgradeIndicators.delete(tower)
+	}
+
+	private updateUpgradeIndicators(): void {
+		// ensure indicators exist only for upgradable towers
+		for (const tower of this.towers) {
+			const has = this.upgradeIndicators.has(tower)
+			const can = tower.canUpgrade()
+			if (can && !has) {
+				this.createUpgradeIndicator(tower)
+			} else if (!can && has) {
+				this.removeUpgradeIndicator(tower)
+			}
+		}
+
+		// follow tower positions and update price / tint
+		for (const [tower, container] of this.upgradeIndicators.entries()) {
+			if (!tower || !container) continue
+
+			container.x = tower.sprite.x
+			container.y = tower.sprite.y - ((tower.sprite.displayHeight) / 2 - 16)
+
+			const cost = this.getUpgradeCost(tower)
+
+			// update price text
+			const priceText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined
+			if (priceText) priceText.setText(`${cost}`)
+
+			// tint arrow and price based on affordability
+			const arrow = container.list.find(c => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined
+			if (arrow) {
+				if (this.gold >= cost) {
+					arrow.clearTint()
+					if (priceText) priceText.setStyle({ color: '#ffffff' })
+				} else {
+					arrow.setTint(0xff9999)
+					if (priceText) priceText.setStyle({ color: '#ffcccc' })
+				}
+			}
+		}
+	}
+
+	private upgradeTower(clickedTower: Tower): void {
+		console.log('Attempting to upgrade tower', clickedTower)
+		if (!clickedTower.canUpgrade()) {
+			clickedTower.sprite.setTint(0xff8888)
+			this.time.delayedCall(180, () => clickedTower.sprite.clearTint())
+			return
+		}
+
+		const upgradeCost = this.getUpgradeCost(clickedTower)
+		if (this.gold < upgradeCost) {
+			// optional: feedback (flash red)
+			clickedTower.sprite.setTint(0xff0000)
+			this.time.delayedCall(220, () => clickedTower.sprite.clearTint())
+			return
+		}
+
+		// Pay and perform upgrade
+		this.gold -= upgradeCost
+		this.emitGold()
+		const ok = clickedTower.upgrade()
+		if (ok) {
+			this.game.events.emit(GAME_EVENTS.towerUpgraded, clickedTower)
+			this.playPlop()
+		}
+
+		// nach Upgrade gegebenenfalls Indikator entfernen/aktualisieren
+		if (!clickedTower.canUpgrade()) {
+			this.removeUpgradeIndicator(clickedTower)
+		}
+	}
+
+
 
 	private selectTowerType(towerType: TowerType): void {
 		// Check if player can afford this tower
@@ -340,7 +481,7 @@ export class GameScene extends Phaser.Scene {
 	private sortTowersByDepth(): void {
 		// Sort towers by Y position (higher Y = further back)
 		this.towers.sort((a, b) => a.sprite.y - b.sprite.y)
-		
+
 		// Update depth based on sorted order
 		this.towers.forEach((tower, index) => {
 			tower.sprite.setDepth(2 + index * 0.001) // Start at depth 2, increment by small amounts
@@ -350,7 +491,7 @@ export class GameScene extends Phaser.Scene {
 	private startWave(wave: number): void {
 		// OrcWarrior every 5th wave
 		if (wave % 5 === 0) {
-            OrcWarrior.spawn(this, wave);
+			OrcWarrior.spawn(this, wave);
 			return
 		}
 
@@ -362,7 +503,7 @@ export class GameScene extends Phaser.Scene {
 			repeat: count - 1,
 			callback: () => {
 				this.spawnRandomEnemy(wave);
-            },
+			},
 		})
 	}
 
@@ -378,7 +519,7 @@ export class GameScene extends Phaser.Scene {
 			Unicorn,
 			Zombie
 		]
-		
+
 		const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)]
 		if (randomType) {
 			randomType.spawn(this, wave)
@@ -389,12 +530,12 @@ export class GameScene extends Phaser.Scene {
 
 		const idx = this.enemies.indexOf(enemy)
 		if (idx >= 0) {
-            this.enemies.splice(idx, 1)
+			this.enemies.splice(idx, 1)
 
-            if (enemy.isDead()) {
-                this.game.events.emit(GAME_EVENTS.enemyKilled)
+			if (enemy.isDead()) {
+				this.game.events.emit(GAME_EVENTS.enemyKilled)
 			}
-        }
+		}
 
 		if (enemy.isDead()) {
 			this.flingEnemyOffscreen(enemy)
@@ -425,6 +566,28 @@ export class GameScene extends Phaser.Scene {
 			ease: 'Quad.easeOut',
 			onComplete: () => enemy.destroy()
 		})
+	}
+
+	private findTowerAt(worldX: number, worldY: number): Tower | undefined {
+		for (let i = this.towers.length - 1; i >= 0; i--) {
+			const t = this.towers[i]!
+			const bounds = t.sprite.getBounds()
+			if (bounds.contains(worldX, worldY)) return t
+		}
+		return undefined
+	}
+
+	private getUpgradeCost(tower: Tower): number {
+		const typeAny = tower.type as any
+		const nextLevel = tower.getLevel() + 1
+		// If level-specific cost provided in type.levels[nextLevel-1], use it
+		if (Array.isArray(typeAny.levels) && typeAny.levels[nextLevel - 1] && typeof typeAny.levels[nextLevel - 1].cost === 'number') {
+			return typeAny.levels[nextLevel - 1].cost
+		}
+		// Fallback formula: base cost * growth^(currentLevel-1)
+		const base = tower.type.cost ?? 50
+		const growth = 1.6
+		return Math.max(1, Math.floor(base * Math.pow(growth, tower.getLevel() - 1)))
 	}
 
 	private emitGold(): void {

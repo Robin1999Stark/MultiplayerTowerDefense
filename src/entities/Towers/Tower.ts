@@ -3,23 +3,34 @@ import { OrcGrunt } from '../Units/OrcGrunt'
 import { TowerType } from '../../services/TowerStore'
 
 export class Tower {
+
 	public sprite: Phaser.GameObjects.Sprite
-	protected readonly range: number
-	protected readonly fireRateMs: number
-	protected readonly damage: number
+	protected range: number
+	protected fireRateMs: number
+	protected damage: number
 	protected timeSinceShot = 0
 	protected scene: Phaser.Scene
 	public readonly type: TowerType
 
+	protected level = 1
+	protected maxLevel: number
+	protected baseScale = 0.08
+
 	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		this.scene = scene
 		this.type = type
+
 		this.range = type.range
 		this.fireRateMs = type.fireRateMs
 		this.damage = type.damage
+
+		this.maxLevel = (type as any).levels?.length ?? (type as any).maxLevel ?? 5
+
 		this.sprite = scene.add.sprite(x, y, 'tower_basic')
 		this.sprite.setDepth(2)
-		this.sprite.setScale(0.08)
+		this.sprite.setScale(this.baseScale)
+
+		this.applyLevelStats(this.level)
 	}
 
 	update(deltaMs: number, enemies: OrcGrunt[]): void {
@@ -106,5 +117,54 @@ export class Tower {
 		} catch (error) {
 			return null
 		}
+	}
+
+	public getLevel(): number {
+		return this.level
+	}
+
+	public canUpgrade(): boolean {
+		return this.level < this.maxLevel
+	}
+
+	public upgrade(): boolean {
+		if (!this.canUpgrade()) return false
+		this.level++
+		this.applyLevelStats(this.level)
+		this.playUpgradeEffect()
+		return true
+	}
+
+	protected applyLevelStats(level: number): void {
+		const typeAny = this.type as any
+		const levelDefs = typeAny.levels
+		if (Array.isArray(levelDefs) && levelDefs[level - 1]) {
+			const def = levelDefs[level - 1]
+			this.range = def.range ?? this.range
+			this.fireRateMs = def.fireRateMs ?? this.fireRateMs
+			this.damage = def.damage ?? this.damage
+		} else {
+			// fallback: exponential multipliers per level above 1
+			const lvl = level - 1
+			this.range = (this.type.range) * Math.pow(1.08, lvl)
+			this.damage = (this.type.damage) * Math.pow(1.18, lvl)
+
+			this.fireRateMs = Math.max(50, (this.type.fireRateMs) * Math.pow(0.92, lvl))
+		}
+	}
+
+	protected playUpgradeEffect(): void {
+		this.scene.tweens.add({
+			targets: this.sprite,
+			scale: this.baseScale * 1.25,
+			duration: 140,
+			yoyo: true,
+			ease: 'Sine.easeInOut'
+		})
+
+		this.sprite.setTintFill(0xffff99)
+		this.scene.time.delayedCall(220, () => {
+			this.sprite.clearTint()
+		})
 	}
 } 
