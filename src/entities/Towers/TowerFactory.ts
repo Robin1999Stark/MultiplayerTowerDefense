@@ -4,6 +4,7 @@ import { SnipingTower } from './SnipingTower';
 import { RapidFireTower } from './RapidFireTower';
 import { AOETower } from './AOETower';
 import { ChainTower } from './ChainTower';
+import { FrostTower } from './FrostTower';
 import { TowerType, TowerTypeID } from '../../services/TowerStore';
 
 /**
@@ -30,6 +31,8 @@ export class TowerFactory {
                 return new AOETower(scene, x, y, towerType);
             case TowerTypeID.CHAIN:
                 return new ChainTower(scene, x, y, towerType);
+            case TowerTypeID.FROST:
+                return new FrostTower(scene, x, y, towerType);
             default:
                 // Default to basic tower if type is not recognized
                 return new Tower(scene, x, y, towerType);

@@ -5,7 +5,8 @@ export enum TowerTypeID {
     SNIPER = 'sniper',
     RAPID = 'rapid',
     AOE = 'aoe',
-    CHAIN = 'chain'
+    CHAIN = 'chain',
+    FROST = 'frost'
 }
 
 export interface TowerType {
@@ -38,15 +39,26 @@ export class TowerStore {
     private initializeTowerTypes(): void {
         const types: TowerType[] = [
             {
-                id: TowerTypeID.BASIC,
-                name: 'Basic Tower',
+                id: TowerTypeID.FROST,
+                name: 'Frost Tower',
+                key: '6',
+                cost: 250,
+                range: 200,
+                fireRateMs: 3000,
+                damage: 0,
+                color: 0x00aaff,
+                description: 'Slows enemies for 10 seconds'
+            },
+            {
+                id: TowerTypeID.RAPID,
+                name: 'Rapid Fire Tower',
                 key: '5',
-                cost: 10,
-                range: 1000,
-                fireRateMs: 200,
-                damage: 50,
-                color: 0x2ed573,
-                description: 'Balanced tower with moderate damage and fire rate',
+                cost: 150,
+                range: 80,
+                fireRateMs: 2,
+                damage: 100,
+                color: 0x2205ff,
+                description: 'Short range, fast fire rate, low damage'
             },
             {
                 id: TowerTypeID.SNIPER,
@@ -82,15 +94,15 @@ export class TowerStore {
                 description: 'triggers a chain of explosions'
             },
             {
-                id: TowerTypeID.RAPID,
-                name: 'Rapid Fire Tower',
+                id: TowerTypeID.BASIC,
+                name: 'Basic Tower',
                 key: '1',
-                cost: 150,
-                range: 80,
-                fireRateMs: 2,
-                damage: 100,
-                color: 0x2205ff,
-                description: 'Short range, fast fire rate, low damage'
+                cost: 10,
+                range: 1000,
+                fireRateMs: 200,
+                damage: 50,
+                color: 0x2ed573,
+                description: 'Balanced tower with moderate damage and fire rate',
             }
         ]
 

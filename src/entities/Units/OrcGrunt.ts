@@ -8,6 +8,10 @@ export class OrcGrunt {
 	public reachedEnd = false
 	private pathIndex = 0
 	private walkTime = 0
+	private slowTimer = 0
+	private slowDuration = 0
+	private baseSpeed: number
+	private isSlowed = false
 
 	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number, textureKey: string = 'orc_grunt', radius: number = 16) {
 		this.sprite = scene.physics.add.sprite(x, y, textureKey)
@@ -16,12 +20,22 @@ export class OrcGrunt {
 		this.sprite.setDepth(1)
 		this.hp = hp
 		this.speed = speed
+		this.baseSpeed = speed
 	}
 
 	update(deltaMs: number, path: Phaser.Math.Vector2[]): void {
 		if (this.reachedEnd) return
 		const dt = deltaMs / 1000
 		this.walkTime += dt * 10
+		
+		// Handle slowing effect
+		if (this.isSlowed) {
+			this.slowTimer += deltaMs
+			if (this.slowTimer >= this.slowDuration) {
+				this.removeSlow()
+			}
+		}
+		
 		const pos = new Phaser.Math.Vector2(this.sprite.x, this.sprite.y)
 		const target = path[this.pathIndex + 1]
 		if (!target) {
@@ -45,6 +59,22 @@ export class OrcGrunt {
 
 	takeDamage(amount: number): void {
 		this.hp -= amount
+	}
+
+	applySlow(durationMs: number): void {
+		this.slowTimer = 0
+		this.slowDuration = durationMs
+		this.isSlowed = true
+		this.speed = this.baseSpeed * 0.5 // Half speed
+		this.sprite.setTint(0x00aaff) // Blue tint for slowed enemies
+	}
+
+	removeSlow(): void {
+		this.isSlowed = false
+		this.speed = this.baseSpeed
+		this.slowTimer = 0
+		this.slowDuration = 0
+		this.sprite.clearTint() // Remove blue tint
 	}
 
 	isDead(): boolean {

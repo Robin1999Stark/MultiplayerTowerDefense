@@ -63,6 +63,7 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
 		this.load.image('tower_rapid', 'assets/towers/tower_rapid.png')
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
+		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
 		this.load.image('arrow', 'assets/projectiles/arrow.png')
 		this.load.image('background', 'assets/background.jpeg')
 		this.load.image('floor_tile', 'assets/floor_tile.jpeg')
@@ -150,7 +151,7 @@ export class GameScene extends Phaser.Scene {
 			const castle = this.add.image(endPoint.x - 40, endPoint.y - 43, 'castle')
 			castle.setScale(0.15) // Scale down the castle to fit the game
 			castle.setOrigin(0.5, 0.5)
-			castle.setDepth(10) // Place castle above path but below towers
+			castle.setDepth(1) // Place castle above path but below towers
 		}
 
 		// Subscribe to UI toggle for placing towers (deprecated, keeping for backwards compatibility)

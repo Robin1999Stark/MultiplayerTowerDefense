@@ -25,6 +25,7 @@ export class UIScene extends Phaser.Scene {
 		this.load.image('tower_rapid', 'assets/towers/tower_rapid.png')
 		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
+		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
 	}
 
 	create(): void {
@@ -158,6 +159,10 @@ export class UIScene extends Phaser.Scene {
 				break
 			case TowerTypeID.AOE:
 				textureKey = 'tower_explosive'
+				scale = 0.15
+				break
+			case TowerTypeID.FROST:
+				textureKey = 'tower_frost'
 				scale = 0.15
 				break
 			default:
