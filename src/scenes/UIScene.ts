@@ -131,16 +131,6 @@ export class UIScene extends Phaser.Scene {
 		bg.setName('bg')
 		cardContainer.add(bg)
 
-		// Hotkey indicator at the top center
-		const keyText = this.add.text(-width / 2, 5, `[${towerType.key}]`, {
-			fontSize: '13px',
-			color: '#00d4ff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
-		})
-		keyText.setOrigin(0.5, 0)
-		cardContainer.add(keyText)
-
 		// Tower preview sprite
 		let textureKey = 'tower_basic'
 		let scale = 0.15 // Much smaller scale for UI cards
@@ -172,6 +162,16 @@ export class UIScene extends Phaser.Scene {
 		const towerSprite = this.add.sprite(-width / 2, 30, textureKey)
 		towerSprite.setScale(scale)
 		cardContainer.add(towerSprite)
+
+		// Hotkey indicator above the tower sprite
+		const keyText = this.add.text(-width / 2, 15, `[${towerType.key}]`, {
+			fontSize: '13px',
+			color: '#00d4ff',
+			fontFamily: 'monospace',
+			fontStyle: 'bold'
+		})
+		keyText.setOrigin(0.5, 0)
+		cardContainer.add(keyText)
 
 		// Tower name (shorter version)
 		const shortName = towerType.name.replace(' Tower', '')

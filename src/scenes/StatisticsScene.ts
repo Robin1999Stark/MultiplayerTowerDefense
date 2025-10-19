@@ -11,6 +11,7 @@ export class StatisticsScene extends Scene {
     private towersBuilt: number = 0;
     private enemiesKilled: number = 0;
     private wavesCompleted: number = 0;
+    private lives: number = 20;
 
     constructor() {
         super({ key: 'StatisticsScene' });
@@ -26,6 +27,7 @@ export class StatisticsScene extends Scene {
         this.load.image('gold', 'assets/gold.png');
         this.load.image('skull', 'assets/skull.png');
         this.load.image('tower', 'assets/towers/tower_basic.png');
+        this.load.image('heart', 'assets/heart.png');
     }
 
     create() {
@@ -39,7 +41,7 @@ export class StatisticsScene extends Scene {
         const spacing = 80; // Horizontal spacing between statistics
 
         // Create semi-transparent black background panel
-        const panelWidth = spacing * 4 + 50; // Width to cover all statistics
+        const panelWidth = spacing * 5 + 50; // Width to cover all statistics including lives
         const panelHeight = 35; // Height to cover icons and text
         const backgroundPanel = this.add.rectangle(
             startX - 5,
@@ -84,7 +86,7 @@ export class StatisticsScene extends Scene {
         );
 
         // Towers built statistic
-        const towerIcon = this.add.image(startX + spacing * 2, startY, 'tower');
+        const towerIcon = this.add.image(startX + spacing * 2, startY - 3, 'tower');
         towerIcon.setScale(0.04);
         towerIcon.setOrigin(0, 0);
 
@@ -95,9 +97,22 @@ export class StatisticsScene extends Scene {
             textStyle
         );
 
+        // Lives statistic
+        const heartIcon = this.add.image(startX + spacing * 3, startY + 3, 'heart');
+        heartIcon.setScale(0.08);
+        heartIcon.setOrigin(0, 0);
+
+        this.statistics['lives'] = this.add.text(
+            startX + spacing * 3 + 25,
+            startY + 2,
+            '20',
+            textStyle
+        );
+        
+
         // Waves completed statistic
         this.statistics['wavesCompleted'] = this.add.text(
-            startX + spacing * 3,
+            startX + spacing * 4,
             startY + 2,
             'Wave: 0',
             textStyle
@@ -105,6 +120,7 @@ export class StatisticsScene extends Scene {
 
         // Set up event listeners for game events
         this.game.events.on(GAME_EVENTS.goldChanged, this.onGoldChanged, this);
+        this.game.events.on(GAME_EVENTS.livesChanged, this.onLivesChanged, this);
         this.game.events.on(GAME_EVENTS.waveChanged, this.onWaveChanged, this);
         this.game.events.on(GAME_EVENTS.enemyKilled, this.onEnemyKilled, this);
         this.game.events.on(GAME_EVENTS.towerBuilt, this.onTowerBuilt, this);
@@ -122,6 +138,9 @@ export class StatisticsScene extends Scene {
                     this.statistics[key].setText(String(value));
                     break;
                 case 'towersBuilt':
+                    this.statistics[key].setText(String(value));
+                    break;
+                case 'lives':
                     this.statistics[key].setText(String(value));
                     break;
                 case 'wavesCompleted':
@@ -149,5 +168,10 @@ export class StatisticsScene extends Scene {
     private onWaveChanged(wave: number): void {
         this.wavesCompleted = wave - 1;
         this.updateStatistic('wavesCompleted', this.wavesCompleted);
+    }
+
+    private onLivesChanged(lives: number): void {
+        this.lives = lives;
+        this.updateStatistic('lives', this.lives);
     }
 }
