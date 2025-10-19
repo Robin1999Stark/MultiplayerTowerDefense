@@ -307,6 +307,10 @@ export class GameScene extends Phaser.Scene {
 				textureKey = 'tower_explosive'
 				scale = 0.1
 				break
+			case TowerTypeID.FROST:
+				textureKey = 'tower_frost'
+				scale = 0.1
+				break
 			default:
 				textureKey = 'tower_basic'
 				scale = 0.08
