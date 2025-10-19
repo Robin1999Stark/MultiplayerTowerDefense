@@ -4,13 +4,14 @@ import { TowerType } from '../../services/TowerStore'
 import { OrcGrunt } from '../Units/OrcGrunt'
 
 export class FrostTower extends Tower {
+
 	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		super(scene, x, y, type)
 		this.sprite.setTexture('tower_frost')
 		this.sprite.setScale(0.1)
 	}
 
-	protected shoot(target: OrcGrunt): void {
+	protected override shoot(target: OrcGrunt): void {
 		// Audio blip for the shot
 		this.playShootTone()
 
@@ -19,14 +20,14 @@ export class FrostTower extends Tower {
 		bullet.setScale(0.03)
 		bullet.setOrigin(0.5, 0.5)
 		bullet.setDepth(3)
-		
+
 		// Make the bullet blue to indicate frost effect
 		bullet.setTint(0x00aaff)
-		
+
 		const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
 		const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)
 		bullet.setRotation(angle - Math.PI / 2)
-		
+
 		this.scene.tweens.add({
 			targets: bullet,
 			x: target.sprite.x,
@@ -40,7 +41,7 @@ export class FrostTower extends Tower {
 		})
 	}
 
-	private playShootTone(): void {
+	protected override playShootTone(): void {
 		const audioCtx = this.getAudioContext()
 		if (!audioCtx) return
 
@@ -63,7 +64,7 @@ export class FrostTower extends Tower {
 		}
 	}
 
-	private getAudioContext(): AudioContext | null {
+	protected override getAudioContext(): AudioContext | null {
 		const phaserSound = this.scene.sound as { context?: AudioContext }
 		const existingCtx = phaserSound?.context || window.audioCtx
 

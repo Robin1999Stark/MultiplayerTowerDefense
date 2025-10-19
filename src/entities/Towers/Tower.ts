@@ -6,12 +6,12 @@ export class Tower {
 	public sprite: Phaser.GameObjects.Sprite
 	protected readonly range: number
 	protected readonly fireRateMs: number
-    protected readonly damage: number
+	protected readonly damage: number
 	protected timeSinceShot = 0
-	private scene: Phaser.Scene
-    public readonly type: TowerType
+	protected scene: Phaser.Scene
+	public readonly type: TowerType
 
-    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
+	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		this.scene = scene
 		this.type = type
 		this.range = type.range
@@ -44,7 +44,7 @@ export class Tower {
 		return nearest
 	}
 
-	private shoot(target: OrcGrunt): void {
+	protected shoot(target: OrcGrunt): void {
 		// Audio blip for the shot
 		this.playShootTone()
 
@@ -68,7 +68,7 @@ export class Tower {
 		})
 	}
 
-	private playShootTone(): void {
+	protected playShootTone(): void {
 		const audioCtx = this.getAudioContext()
 		if (!audioCtx) return
 
@@ -90,7 +90,7 @@ export class Tower {
 		}
 	}
 
-	private getAudioContext(): AudioContext | null {
+	protected getAudioContext(): AudioContext | null {
 		const phaserSound = this.scene.sound as { context?: AudioContext }
 		const existingCtx = phaserSound?.context || window.audioCtx
 
