@@ -3,7 +3,7 @@ import { PathGenerator } from './PathGenerator'
 import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 import { Tower } from "../entities/Towers/Tower";
 import { TowerFactory } from "../entities/Towers/TowerFactory";
-import { EnemyFactory, Enemy } from "../entities/Factories/EnemyFactory";
+import { WaveFactory } from "../entities/Factories/WaveFactory";
 
 export const GAME_EVENTS = {
 	placeTowerToggle: 'ui.placeTowerToggle',
@@ -24,11 +24,10 @@ export class GameScene extends Phaser.Scene {
 	private isPlacingTower = false
 	private gold = 100
 	private lives = 20
-	private wave = 1
 	private towerStore: TowerStore
 	private selectedTowerType: TowerType | null = null
 	private ghostTower?: Phaser.GameObjects.Sprite | undefined
-	private enemyFactory!: EnemyFactory
+	private waveFactory!: WaveFactory
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
 
@@ -98,13 +97,23 @@ export class GameScene extends Phaser.Scene {
 		// Initialize registry so UI can read initial values immediately
 		this.registry.set('gold', this.gold)
 		this.registry.set('lives', this.lives)
-		this.registry.set('wave', this.wave)
+		this.registry.set('wave', 1)
 
 		// Generate a randomized path across the map
 		this.pathPoints = PathGenerator.generateRandomPath(this.scale.width, this.scale.height)
 		
-		// Initialize enemy factory
-		this.enemyFactory = new EnemyFactory(this, this.pathPoints)
+		// Initialize wave factory
+		this.waveFactory = new WaveFactory(this, this.pathPoints)
+		
+		// Set up wave completion callback
+		this.waveFactory.onWaveComplete(() => {
+			// Delay then start next wave
+			this.time.delayedCall(200, () => {
+				const nextWave = this.waveFactory.incrementWave();
+				this.emitWave();
+				this.startWave(nextWave);
+			});
+		});
 
 		// Draw the path using tiled floor sprites
 		const tex = this.textures.get('floor_tile')
@@ -213,7 +222,7 @@ export class GameScene extends Phaser.Scene {
 
 
 		// Start wave spawning
-		this.startWave(this.wave)
+		this.startWave(1)
 
 		// Emit initial UI values
 		this.emitGold()
@@ -223,7 +232,7 @@ export class GameScene extends Phaser.Scene {
 
 	override update(time: number, delta: number): void {
 		// Update enemies and get results
-		const { goldEarned, livesLost } = this.enemyFactory.updateEnemies(delta);
+		const { goldEarned, livesLost } = this.waveFactory.update(delta);
 		
 		// Update gold if enemies were killed
 		if (goldEarned > 0) {
@@ -239,22 +248,12 @@ export class GameScene extends Phaser.Scene {
 
 		// Update towers shooting
 		for (const tower of this.towers) {
-			tower.update(delta, this.enemyFactory.getEnemies());
+			tower.update(delta, this.waveFactory.getEnemies());
 		}
 
 		// Sort towers by Y position for proper depth ordering
 		this.sortTowersByDepth();
 		this.updateUpgradeIndicators();
-		
-		// End wave if no enemies remaining and no more to spawn
-		if (this.enemyFactory.isWaveComplete()) {
-			// Delay then start next wave
-			this.time.delayedCall(200, () => {
-				this.wave += 1;
-				this.emitWave();
-				this.startWave(this.wave);
-			});
-		}
 	}
 
 	private onPlaceTowerToggle = (enabled: boolean) => {
@@ -384,7 +383,7 @@ export class GameScene extends Phaser.Scene {
 		const ok = clickedTower.upgrade()
 		if (ok) {
 			this.game.events.emit(GAME_EVENTS.towerUpgraded, clickedTower)
-			this.enemyFactory.playPlop()
+			this.waveFactory.playEnemyDeathSound()
 		}
 
 		// nach Upgrade gegebenenfalls Indikator entfernen/aktualisieren
@@ -470,7 +469,7 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private startWave(wave: number): void {
-		this.enemyFactory.startWave(wave);
+		this.waveFactory.startWave(wave);
 	}
 
 
@@ -498,8 +497,9 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private emitWave(): void {
-		this.registry.set('wave', this.wave)
-		this.game.events.emit(GAME_EVENTS.waveChanged, this.wave)
+		const currentWave = this.waveFactory.getCurrentWave();
+		this.registry.set('wave', currentWave)
+		this.game.events.emit(GAME_EVENTS.waveChanged, currentWave)
 	}
 
 	private snapToGrid(x: number, y: number): Phaser.Math.Vector2 {
