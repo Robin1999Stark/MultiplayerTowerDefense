@@ -1,7 +1,8 @@
 import Phaser from 'phaser'
-import {GameScene} from "@scenes/GameScene";
+import { GameScene } from "@scenes/GameScene";
+import { Enemy } from "../Factories/EnemyFactory";
 
-export class OrcGrunt {
+export class OrcGrunt implements Enemy {
 	public sprite: Phaser.Physics.Arcade.Sprite
 	public hp: number
 	public speed: number
@@ -85,16 +86,14 @@ export class OrcGrunt {
 		this.sprite.destroy()
 	}
 
-    static spawn(scene: GameScene, wave: number): void {
-
+    static spawn(scene: Phaser.Scene, wave: number): Enemy {
         const hp = 30 + wave * 10
         const speed = 70 + wave * 3
 
-        const start = scene.pathPoints[0]
-        if (!start) return
+        const gameScene = scene as GameScene
+        const start = gameScene.pathPoints[0]
+        if (!start) throw new Error("No path points found")
 
-        const enemy = new this(scene, start.x, start.y, hp, speed)
-
-        scene.enemies.push(enemy)
+        return new this(scene, start.x, start.y, hp, speed)
     }
 } 

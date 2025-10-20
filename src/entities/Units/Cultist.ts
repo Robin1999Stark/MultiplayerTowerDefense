@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { OrcGrunt } from './OrcGrunt'
 import { GameScene } from '@scenes/GameScene'
+import { Enemy } from '../Factories/EnemyFactory'
 
 export class Cultist extends OrcGrunt {
 	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number) {
@@ -8,14 +9,14 @@ export class Cultist extends OrcGrunt {
 		this.sprite.setScale(0.07)
 	}
 
-	static override spawn(scene: GameScene, wave: number): void {
+	static override spawn(scene: Phaser.Scene, wave: number): Enemy {
 		const hp = 25 + wave * 8
 		const speed = 90 + wave * 4
 
-		const start = scene.pathPoints[0]
-		if (!start) return
+		const gameScene = scene as GameScene
+		const start = gameScene.pathPoints[0]
+		if (!start) throw new Error("No path points found")
 
-		const enemy = new this(scene, start.x, start.y, hp, speed)
-		scene.enemies.push(enemy)
+		return new this(scene, start.x, start.y, hp, speed)
 	}
 }

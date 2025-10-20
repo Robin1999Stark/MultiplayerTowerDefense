@@ -1,18 +1,9 @@
 import Phaser from 'phaser'
-import { OrcGrunt } from '../entities/Units/OrcGrunt'
-import { OrcWarrior } from '../entities/Units/OrcWarrior'
-import { Berserker } from '../entities/Units/Berserker'
-import { Chonkers } from '../entities/Units/Chonkers'
-import { Cultist } from '../entities/Units/Cultist'
-import { Demon } from '../entities/Units/Demon'
-import { Imp } from '../entities/Units/Imp'
-import { Skeleton } from '../entities/Units/Skeleton'
-import { Unicorn } from '../entities/Units/Unicorn'
-import { Zombie } from '../entities/Units/Zombie'
 import { PathGenerator } from './PathGenerator'
 import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 import { Tower } from "../entities/Towers/Tower";
 import { TowerFactory } from "../entities/Towers/TowerFactory";
+import { EnemyFactory, Enemy } from "../entities/Factories/EnemyFactory";
 
 export const GAME_EVENTS = {
 	placeTowerToggle: 'ui.placeTowerToggle',
@@ -28,10 +19,8 @@ export const GAME_EVENTS = {
 export class GameScene extends Phaser.Scene {
 	static KEY = 'GameScene'
 
-	enemies: (OrcGrunt | OrcWarrior | Berserker | Chonkers | Cultist | Demon | Imp | Skeleton | Unicorn | Zombie)[] = []
 	pathPoints: Phaser.Math.Vector2[] = []
 	private towers: Tower[] = []
-	private spawnTimer?: Phaser.Time.TimerEvent | undefined
 	private isPlacingTower = false
 	private gold = 100
 	private lives = 20
@@ -39,6 +28,7 @@ export class GameScene extends Phaser.Scene {
 	private towerStore: TowerStore
 	private selectedTowerType: TowerType | null = null
 	private ghostTower?: Phaser.GameObjects.Sprite | undefined
+	private enemyFactory!: EnemyFactory
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
 
@@ -112,6 +102,9 @@ export class GameScene extends Phaser.Scene {
 
 		// Generate a randomized path across the map
 		this.pathPoints = PathGenerator.generateRandomPath(this.scale.width, this.scale.height)
+		
+		// Initialize enemy factory
+		this.enemyFactory = new EnemyFactory(this, this.pathPoints)
 
 		// Draw the path using tiled floor sprites
 		const tex = this.textures.get('floor_tile')
@@ -229,59 +222,38 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	override update(time: number, delta: number): void {
-		// Update enemies
-		for (const enemy of [...this.enemies]) {
-			enemy.update(delta, this.pathPoints)
-			if (enemy.isDead()) {
-				const isBoss = enemy.sprite.texture.key === 'orc_warrior'
-				this.gold += isBoss ? 100 : 10
-				this.emitGold()
-				this.playPlop()
-				this.removeEnemy(enemy)
-				continue
-			}
-
-			// Check if enemy is close to castle (within 50 pixels of castle position)
-			if (this.pathPoints.length > 0) {
-				const endPoint = this.pathPoints[this.pathPoints.length - 1]!
-				const castleX = endPoint.x - 40
-				const castleY = endPoint.y - 43
-				const distanceToCastle = Phaser.Math.Distance.Between(
-					enemy.sprite.x, enemy.sprite.y,
-					castleX, castleY
-				)
-
-				if (distanceToCastle < 50) {
-					this.lives -= 1
-					this.emitLives()
-					this.removeEnemy(enemy)
-					continue
-				}
-			}
-
-			if (enemy.reachedEnd) {
-				this.lives -= 1
-				this.emitLives()
-				this.removeEnemy(enemy)
-			}
+		// Update enemies and get results
+		const { goldEarned, livesLost } = this.enemyFactory.updateEnemies(delta);
+		
+		// Update gold if enemies were killed
+		if (goldEarned > 0) {
+			this.gold += goldEarned;
+			this.emitGold();
+		}
+		
+		// Update lives if enemies reached the end
+		if (livesLost > 0) {
+			this.lives -= livesLost;
+			this.emitLives();
 		}
 
 		// Update towers shooting
 		for (const tower of this.towers) {
-			tower.update(delta, this.enemies)
+			tower.update(delta, this.enemyFactory.getEnemies());
 		}
 
 		// Sort towers by Y position for proper depth ordering
-		this.sortTowersByDepth()
-		this.updateUpgradeIndicators()
+		this.sortTowersByDepth();
+		this.updateUpgradeIndicators();
+		
 		// End wave if no enemies remaining and no more to spawn
-		if (this.enemies.length === 0 && this.spawnTimer && this.spawnTimer.getRepeatCount() === 0 && this.spawnTimer.getProgress() === 1) {
+		if (this.enemyFactory.isWaveComplete()) {
 			// Delay then start next wave
 			this.time.delayedCall(200, () => {
-				this.wave += 1
-				this.emitWave()
-				this.startWave(this.wave)
-			})
+				this.wave += 1;
+				this.emitWave();
+				this.startWave(this.wave);
+			});
 		}
 	}
 
@@ -412,7 +384,7 @@ export class GameScene extends Phaser.Scene {
 		const ok = clickedTower.upgrade()
 		if (ok) {
 			this.game.events.emit(GAME_EVENTS.towerUpgraded, clickedTower)
-			this.playPlop()
+			this.enemyFactory.playPlop()
 		}
 
 		// nach Upgrade gegebenenfalls Indikator entfernen/aktualisieren
@@ -498,84 +470,9 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private startWave(wave: number): void {
-		// OrcWarrior every 5th wave
-		if (wave % 5 === 0) {
-			OrcWarrior.spawn(this, wave);
-			return
-		}
-
-		const count = 6 + Math.floor(wave * 1.5)
-
-		this.spawnTimer?.remove()
-		this.spawnTimer = this.time.addEvent({
-			delay: 400,
-			repeat: count - 1,
-			callback: () => {
-				this.spawnRandomEnemy(wave);
-			},
-		})
+		this.enemyFactory.startWave(wave);
 	}
 
-	private spawnRandomEnemy(wave: number): void {
-		const enemyTypes = [
-			OrcGrunt,
-			Berserker,
-			Chonkers,
-			Cultist,
-			Demon,
-			Imp,
-			Skeleton,
-			Unicorn,
-			Zombie
-		]
-
-		const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)]
-		if (randomType) {
-			randomType.spawn(this, wave)
-		}
-	}
-
-	private removeEnemy(enemy: OrcGrunt | OrcWarrior | Berserker | Chonkers | Cultist | Demon | Imp | Skeleton | Unicorn | Zombie): void {
-
-		const idx = this.enemies.indexOf(enemy)
-		if (idx >= 0) {
-			this.enemies.splice(idx, 1)
-
-			if (enemy.isDead()) {
-				this.game.events.emit(GAME_EVENTS.enemyKilled)
-			}
-		}
-
-		if (enemy.isDead()) {
-			this.flingEnemyOffscreen(enemy)
-			return
-		}
-
-		enemy.destroy()
-	}
-
-	private flingEnemyOffscreen(enemy: OrcGrunt | OrcWarrior | Berserker | Chonkers | Cultist | Demon | Imp | Skeleton | Unicorn | Zombie): void {
-		// Disable physics and fling the sprite offscreen with a spin, then destroy
-		enemy.sprite.setVelocity(0, 0)
-		const body = enemy.sprite.body as Phaser.Physics.Arcade.Body | null | undefined
-		if (body) body.setEnable(false)
-
-		const angle = Phaser.Math.FloatBetween(0, Math.PI * 2)
-		const distance = Math.max(this.scale.width, this.scale.height) + 200
-		const targetX = enemy.sprite.x + Math.cos(angle) * distance
-		const targetY = enemy.sprite.y + Math.sin(angle) * distance
-		const spin = Phaser.Math.FloatBetween(20, 60) * (Math.random() < 0.5 ? -1 : 1)
-
-		this.tweens.add({
-			targets: enemy.sprite,
-			x: targetX,
-			y: targetY,
-			rotation: enemy.sprite.rotation + spin,
-			duration: 4500,
-			ease: 'Quad.easeOut',
-			onComplete: () => enemy.destroy()
-		})
-	}
 
 	private findTowerAt(worldX: number, worldY: number): Tower | undefined {
 		for (let i = this.towers.length - 1; i >= 0; i--) {
@@ -638,44 +535,4 @@ export class GameScene extends Phaser.Scene {
 		return Math.hypot(p.x - cx, p.y - cy)
 	}
 
-	private playPlop(): void {
-		const audioCtx = this.getAudioContext()
-		if (!audioCtx) return
-
-		const durationSec = 0.06
-		const osc = audioCtx.createOscillator()
-		const gain = audioCtx.createGain()
-		osc.type = 'sine'
-		osc.frequency.setValueAtTime(160, audioCtx.currentTime)
-		osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + durationSec)
-		gain.gain.setValueAtTime(0.001, audioCtx.currentTime)
-		gain.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01)
-		gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durationSec)
-		osc.connect(gain)
-		gain.connect(audioCtx.destination)
-		osc.start()
-		osc.stop(audioCtx.currentTime + durationSec)
-		osc.onended = () => {
-			osc.disconnect()
-			gain.disconnect()
-		}
-	}
-
-	private getAudioContext(): AudioContext | null {
-		const phaserSound = this.sound as { context?: AudioContext }
-		const existingCtx = phaserSound?.context || window.audioCtx
-
-		if (existingCtx) return existingCtx
-
-		try {
-			const AudioContextClass = window.AudioContext || window.webkitAudioContext
-			if (!AudioContextClass) return null
-
-			const newCtx = new AudioContextClass()
-			window.audioCtx = newCtx
-			return newCtx
-		} catch (error) {
-			return null
-		}
-	}
 } 

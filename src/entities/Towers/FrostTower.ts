@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { Tower } from './Tower'
 import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
-import { OrcGrunt } from '../Units/OrcGrunt'
+import { Enemy } from '../Factories/EnemyFactory'
 
 export class FrostTower extends Tower {
 
@@ -14,7 +14,7 @@ export class FrostTower extends Tower {
         this.slowDownMs = this.getCurrentStats()?.slowDownMs ?? 5000;
 	}
 
-	protected override shoot(target: OrcGrunt): void {
+	protected override shoot(target: Enemy): void {
 		// Audio blip for the shot
 		this.playShootTone()
 
@@ -38,7 +38,7 @@ export class FrostTower extends Tower {
 			duration,
 			onComplete: () => {
 				bullet.destroy();
-				target.applySlow(this.slowDownMs);
+                target.applySlow && target.applySlow(this.slowDownMs);
 			}
 		})
 	}
