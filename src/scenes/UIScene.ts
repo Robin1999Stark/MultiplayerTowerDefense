@@ -159,13 +159,13 @@ export class UIScene extends Phaser.Scene {
 				textureKey = 'tower_basic'
 				scale = 0.15
 		}
-		const towerSprite = this.add.sprite(-width / 2, 24, textureKey) // Reduced from 30 to 24 (80%)
+		const towerSprite = this.add.sprite(-width / 2, 24, textureKey)
 		towerSprite.setScale(scale)
 		cardContainer.add(towerSprite)
 
 		// Hotkey indicator above the tower sprite
-		const keyText = this.add.text(-width / 2, 12, `[${towerType.key}]`, { // Reduced from 15 to 12 (80%)
-			fontSize: '11px', // Reduced from 13px to 11px (80%)
+		const keyText = this.add.text(-width / 2, 12, `[${towerType.key}]`, {
+			fontSize: '11px',
 			color: '#00d4ff',
 			fontFamily: 'monospace',
 			fontStyle: 'bold'
@@ -175,8 +175,8 @@ export class UIScene extends Phaser.Scene {
 
 		// Tower name (shorter version)
 		const shortName = towerType.name.replace(' Tower', '')
-		const nameText = this.add.text(-width / 2, 37, shortName, { // Reduced from 46 to 37 (80%)
-			fontSize: '8px', // Reduced from 10px to 8px (80%)
+		const nameText = this.add.text(-width / 2, 37, shortName, {
+			fontSize: '8px',
 			color: '#ffffff',
 			fontFamily: 'monospace',
 			fontStyle: 'bold'
@@ -185,8 +185,9 @@ export class UIScene extends Phaser.Scene {
 		cardContainer.add(nameText)
 
 		// Cost
-		const costText = this.add.text(-width / 2, 42, `${towerType.cost}g`, { // Reduced from 59 to 42 (80%)
-			fontSize: '7px', // Reduced from 9px to 5px (80%)
+		const level1 = towerType.levels.get(1)
+		const costText = this.add.text(-width / 2, 42, `${level1?.cost}g`, {
+			fontSize: '7px',
 			color: '#ffd700',
 			fontFamily: 'monospace'
 		})
@@ -194,9 +195,8 @@ export class UIScene extends Phaser.Scene {
 		costText.setName('cost')
 		cardContainer.add(costText)
 
-		// Stats (range, damage, fire rate)
-		const statsText = this.add.text(-width / 2, 55, `R:${Math.round(towerType.range / 100)} D:${towerType.damage} F:${Math.round(1000 / towerType.fireRateMs)}/s`, { // Reduced from 69 to 55 (80%)
-			fontSize: '6px', // Reduced from 7px to 6px (80%)
+		const statsText = this.add.text(-width / 2, 55, `R:${Math.round((level1?.range || 0) / 100)} D:${level1?.damage} F:${Math.round(1000 / (level1?.fireRateMs || 1))}/s`, {
+			fontSize: '6px',
 			color: '#aaaaaa',
 			fontFamily: 'monospace'
 		})
@@ -218,7 +218,8 @@ export class UIScene extends Phaser.Scene {
 				const towerType = child.getData('towerType') as TowerType
 				if (!towerType) return
 
-				const canAfford = gold >= towerType.cost
+				const level1 = towerType.levels.get(1)
+				const canAfford = gold >= (level1?.cost || 0)
 				const isSelected = this.selectedTowerType?.id === towerType.id
 
 				// Update background

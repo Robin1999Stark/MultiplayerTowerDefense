@@ -22,7 +22,7 @@ export class Tower {
         this.sprite = scene.add.sprite(x, y, 'tower_basic');
         this.sprite.setDepth(2);
 
-        const levelUpdate = this.getCurrentLevel();
+        const levelUpdate = this.getCurrentStats();
 
         if (levelUpdate === null) {
             return;
@@ -77,7 +77,7 @@ export class Tower {
         })
     }
 
-    protected getCurrentLevel(): TowerLevelUpgrade | null {
+    public getCurrentStats(): TowerLevelUpgrade | null {
         const currentLevel = this.type.levels.get(this.level);
 
         if (currentLevel === undefined || currentLevel === null) {
@@ -85,6 +85,20 @@ export class Tower {
         }
 
         return {...currentLevel, baseScale: currentLevel?.baseScale ?? this.baseScale};
+    }
+
+    public getNextUpgrade(): TowerLevelUpgrade | null {
+        const nextLevel = this.type.levels.get(this.level + 1);
+
+        if (nextLevel === undefined || nextLevel === null) {
+            return null;
+        }
+
+        return {...nextLevel, baseScale: (nextLevel?.baseScale ?? this.baseScale) * 1.10};
+    }
+
+    public getLevel(): number {
+        return this.level;
     }
 
     protected playShootTone(): void {
@@ -127,12 +141,8 @@ export class Tower {
         }
     }
 
-    public getLevel(): number {
-        return this.level
-    }
-
     public canUpgrade(): boolean {
-        return this.level < this.maxLevel()
+        return this.level < this.getMaxLevel()
     }
 
     public upgrade(): boolean {
@@ -141,12 +151,13 @@ export class Tower {
             return false;
         }
 
-        const levelUpdate = this.getCurrentLevel();
+        const levelUpdate = this.getNextUpgrade();
 
         if (levelUpdate === null) {
             return false;
         }
 
+        this.level++;
         this.upgradeStats(levelUpdate);
         this.playUpgradeEffect();
 
@@ -155,16 +166,15 @@ export class Tower {
 
     protected upgradeStats(upgrade: TowerLevelUpgrade): void {
 
-        this.level++;
         this.range = upgrade.range;
         this.fireRateMs = upgrade.fireRateMs;
         this.damage = upgrade.damage;
         this.sprite.setScale(upgrade.baseScale);
     }
 
-    protected maxLevel()
+    public getMaxLevel()
     {
-        return this.type.levels.size + 1
+        return this.type.levels.size;
     }
 
 	protected playUpgradeEffect(): void {

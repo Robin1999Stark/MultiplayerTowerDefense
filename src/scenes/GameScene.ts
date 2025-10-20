@@ -180,7 +180,8 @@ export class GameScene extends Phaser.Scene {
 				this.ghostTower.setPosition(position.x, position.y)
 
 				// Color ghost based on whether placement is valid
-				const canPlace = !this.isOnPath(position) && this.gold >= this.selectedTowerType.cost
+				const level1 = this.selectedTowerType.levels.get(1)
+				const canPlace = !this.isOnPath(position) && this.gold >= (level1?.cost || 0)
 				this.ghostTower.setAlpha(canPlace ? 0.6 : 0.3)
 				this.ghostTower.setTint(canPlace ? 0xffffff : 0xff0000)
 				return
@@ -192,7 +193,6 @@ export class GameScene extends Phaser.Scene {
 
 			const clickedTower = this.findTowerAt(pointer.worldX, pointer.worldY)
 			if (clickedTower) {
-				// optional: visuelles Feedback oder Auswahl, aktuell nichts tun
 				return
 			}
 
@@ -205,10 +205,11 @@ export class GameScene extends Phaser.Scene {
 			if (this.isOnPath(position)) return
 
 			// Check if player has enough gold
-			if (this.gold < this.selectedTowerType.cost) return
+			const level1 = this.selectedTowerType.levels.get(1)
+			if (this.gold < (level1?.cost || 0)) return
 
 			// Deduct gold and place tower
-			this.gold -= this.selectedTowerType.cost
+			this.gold -= (level1?.cost || 0)
 			this.emitGold()
 			const tower = TowerFactory.createTower(this, position.x, position.y, this.selectedTowerType)
 			this.towers.push(tower)
@@ -289,29 +290,37 @@ export class GameScene extends Phaser.Scene {
 		this.input.setDefaultCursor(enabled ? 'crosshair' : 'default')
 	}
 
+    private buildLevelText(tower: Tower): string {
+
+        if (tower.getLevel() === tower.getMaxLevel()) {
+            return 'lvl (max)';
+        }
+
+        return 'lvl (' + tower.getLevel() + ' -> ' + (tower.getLevel() + 1) + ')';
+    }
+
 	private createUpgradeIndicator(tower: Tower): void {
 		if (!tower.canUpgrade()) return
 		if (this.upgradeIndicators.has(tower)) return
 
-		const cost = this.getUpgradeCost(tower)
+		const cost = tower.getNextUpgrade()?.cost ?? 0;
 
-		// Arrow placed directly above the tower (bottom-center origin)
 		const img = this.add.image(0, 0, 'upgrade_arrow')
 			.setInteractive({ useHandCursor: true })
 			.setDepth(10)
 			.setScale(0.1)
-			.setOrigin(0.5, 1) // bottom-center so it sits above the tower
+			.setOrigin(0.5, 1);
 
-		// Price text sits to the right of the arrow
-		const priceText = this.add.text(0, 0, `${cost}`, {
+
+		const priceText = this.add.text(0, 0, `${this.buildLevelText(tower)}: ${cost}`, {
 			fontFamily: 'Arial',
 			fontSize: '8px',
 			color: '#ffffff',
 			stroke: '#000000',
 			strokeThickness: 2,
-		}).setOrigin(0, 0.5)
+		}).setOrigin(0, 0.5);
 
-		const margin = 2
+		const margin = 2;
 
 		const container = this.add.container(
 			tower.sprite.x,
@@ -361,11 +370,11 @@ export class GameScene extends Phaser.Scene {
 			container.x = tower.sprite.x
 			container.y = tower.sprite.y - ((tower.sprite.displayHeight) / 2 - 16)
 
-			const cost = this.getUpgradeCost(tower)
+			const cost = tower.getNextUpgrade()?.cost ?? 0;
 
 			// update price text
 			const priceText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined
-			if (priceText) priceText.setText(`${cost}`)
+			if (priceText) priceText.setText(`${this.buildLevelText(tower)}: ${cost}`)
 
 			// tint arrow and price based on affordability
 			const arrow = container.list.find(c => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined
@@ -382,14 +391,14 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private upgradeTower(clickedTower: Tower): void {
-		console.log('Attempting to upgrade tower', clickedTower)
+
 		if (!clickedTower.canUpgrade()) {
 			clickedTower.sprite.setTint(0xff8888)
 			this.time.delayedCall(180, () => clickedTower.sprite.clearTint())
 			return
 		}
 
-		const upgradeCost = this.getUpgradeCost(clickedTower)
+		const upgradeCost = clickedTower.getNextUpgrade()?.cost ?? 0;
 		if (this.gold < upgradeCost) {
 			// optional: feedback (flash red)
 			clickedTower.sprite.setTint(0xff0000)
@@ -412,11 +421,10 @@ export class GameScene extends Phaser.Scene {
 		}
 	}
 
-
-
 	private selectTowerType(towerType: TowerType): void {
 		// Check if player can afford this tower
-		if (this.gold < towerType.cost) {
+		const level1 = towerType.levels.get(1)
+		if (this.gold < (level1?.cost || 0)) {
 			// Could add a visual feedback here that player can't afford it
 			return
 		}
@@ -429,8 +437,9 @@ export class GameScene extends Phaser.Scene {
 			this.ghostTower.destroy()
 		}
 		// Use the same texture as the actual tower
-		let textureKey = 'tower_basic'
-		let scale = 0.08 // Default scale for basic tower
+		let textureKey;
+		let scale;
+
 		switch (towerType.id) {
 			case TowerTypeID.SNIPER:
 				textureKey = 'tower_laser'
@@ -577,19 +586,6 @@ export class GameScene extends Phaser.Scene {
 		return undefined
 	}
 
-	private getUpgradeCost(tower: Tower): number {
-		const typeAny = tower.type as any
-		const nextLevel = tower.getLevel() + 1
-		// If level-specific cost provided in type.levels[nextLevel-1], use it
-		if (Array.isArray(typeAny.levels) && typeAny.levels[nextLevel - 1] && typeof typeAny.levels[nextLevel - 1].cost === 'number') {
-			return typeAny.levels[nextLevel - 1].cost
-		}
-		// Fallback formula: base cost * growth^(currentLevel-1)
-		const base = tower.type.cost ?? 50
-		const growth = 1.6
-		return Math.max(1, Math.floor(base * Math.pow(growth, tower.getLevel() - 1)))
-	}
-
 	private emitGold(): void {
 		this.registry.set('gold', this.gold)
 		this.game.events.emit(GAME_EVENTS.goldChanged, this.gold)
@@ -603,6 +599,7 @@ export class GameScene extends Phaser.Scene {
 			this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { fontSize: '32px', color: '#fff' }).setOrigin(0.5)
 		}
 	}
+
 	private emitWave(): void {
 		this.registry.set('wave', this.wave)
 		this.game.events.emit(GAME_EVENTS.waveChanged, this.wave)
