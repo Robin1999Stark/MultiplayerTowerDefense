@@ -1,157 +1,171 @@
 import Phaser from 'phaser'
 import { OrcGrunt } from '../Units/OrcGrunt'
-import { TowerType } from '../../services/TowerStore'
+import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
 
 export class Tower {
 
-	public sprite: Phaser.GameObjects.Sprite
-	protected range: number
-	protected fireRateMs: number
-	protected damage: number
-	protected timeSinceShot = 0
-	protected scene: Phaser.Scene
-	public readonly type: TowerType
+    public sprite: Phaser.GameObjects.Sprite
+    protected scene: Phaser.Scene
+    public readonly type: TowerType
 
-	protected level = 1
-	protected maxLevel: number
-	protected baseScale = 0.08
+    protected range: number = 0
+    protected fireRateMs: number = 0
+    protected damage: number = 0
+    protected timeSinceShot = 0
 
-	constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
-		this.scene = scene
-		this.type = type
+    protected level = 1
+    protected baseScale = 0.08
 
-		this.range = type.range
-		this.fireRateMs = type.fireRateMs
-		this.damage = type.damage
+    constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
+        this.scene = scene;
+        this.type = type;
+        this.sprite = scene.add.sprite(x, y, 'tower_basic');
+        this.sprite.setDepth(2);
 
-		this.maxLevel = (type as any).levels?.length ?? (type as any).maxLevel ?? 5
+        const levelUpdate = this.getCurrentLevel();
 
-		this.sprite = scene.add.sprite(x, y, 'tower_basic')
-		this.sprite.setDepth(2)
-		this.sprite.setScale(this.baseScale)
+        if (levelUpdate === null) {
+            return;
+        }
 
-		this.applyLevelStats(this.level)
-	}
+        this.upgradeStats(levelUpdate);
+    }
 
-	update(deltaMs: number, enemies: OrcGrunt[]): void {
-		this.timeSinceShot += deltaMs
-		if (this.timeSinceShot < this.fireRateMs) return
-		const target = this.findTarget(enemies)
-		if (!target) return
-		this.timeSinceShot = 0
-		this.shoot(target)
-	}
+    update(deltaMs: number, enemies: OrcGrunt[]): void {
+        this.timeSinceShot += deltaMs
+        if (this.timeSinceShot < this.fireRateMs) return
+        const target = this.findTarget(enemies)
+        if (!target) return
+        this.timeSinceShot = 0
+        this.shoot(target)
+    }
 
-	private findTarget(enemies: OrcGrunt[]): OrcGrunt | undefined {
-		let nearest: OrcGrunt | undefined
-		let nearestDist = Number.POSITIVE_INFINITY
-		for (const e of enemies) {
-			const d = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, e.sprite.x, e.sprite.y)
-			if (d <= this.range && d < nearestDist) {
-				nearestDist = d
-				nearest = e
-			}
-		}
-		return nearest
-	}
+    private findTarget(enemies: OrcGrunt[]): OrcGrunt | undefined {
+        let nearest: OrcGrunt | undefined
+        let nearestDist = Number.POSITIVE_INFINITY
+        for (const e of enemies) {
+            const d = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, e.sprite.x, e.sprite.y)
+            if (d <= this.range && d < nearestDist) {
+                nearestDist = d
+                nearest = e
+            }
+        }
+        return nearest
+    }
 
-	protected shoot(target: OrcGrunt): void {
-		// Audio blip for the shot
-		this.playShootTone()
+    protected shoot(target: OrcGrunt): void {
+        // Audio blip for the shot
+        this.playShootTone()
 
-		// Visual bullet: tweened sprite that damages on arrival
-		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow')
-		bullet.setScale(0.03)
-		bullet.setOrigin(0.5, 0.5)
-		bullet.setDepth(3)
-		const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
-		const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)
-		bullet.setRotation(angle - Math.PI / 2)
-		this.scene.tweens.add({
-			targets: bullet,
-			x: target.sprite.x,
-			y: target.sprite.y,
-			duration,
-			onComplete: () => {
-				bullet.destroy()
-				target.takeDamage(this.damage)
-			}
-		})
-	}
+        // Visual bullet: tweened sprite that damages on arrival
+        const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow')
+        bullet.setScale(0.03)
+        bullet.setOrigin(0.5, 0.5)
+        bullet.setDepth(3)
+        const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
+        const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)
+        bullet.setRotation(angle - Math.PI / 2)
+        this.scene.tweens.add({
+            targets: bullet,
+            x: target.sprite.x,
+            y: target.sprite.y,
+            duration,
+            onComplete: () => {
+                bullet.destroy()
+                target.takeDamage(this.damage)
+            }
+        })
+    }
 
-	protected playShootTone(): void {
-		const audioCtx = this.getAudioContext()
-		if (!audioCtx) return
+    protected getCurrentLevel(): TowerLevelUpgrade | null {
+        const currentLevel = this.type.levels.get(this.level);
 
-		const durationSec = 0.1
-		const oscillator = audioCtx.createOscillator()
-		const gainNode = audioCtx.createGain()
-		oscillator.type = 'square'
-		oscillator.frequency.setValueAtTime(220, audioCtx.currentTime)
-		gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime)
-		gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.005)
-		gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durationSec)
-		oscillator.connect(gainNode)
-		gainNode.connect(audioCtx.destination)
-		oscillator.start()
-		oscillator.stop(audioCtx.currentTime + durationSec)
-		oscillator.onended = () => {
-			oscillator.disconnect()
-			gainNode.disconnect()
-		}
-	}
+        if (currentLevel === undefined || currentLevel === null) {
+            return null;
+        }
 
-	protected getAudioContext(): AudioContext | null {
-		const phaserSound = this.scene.sound as { context?: AudioContext }
-		const existingCtx = phaserSound?.context || window.audioCtx
+        return {...currentLevel, baseScale: currentLevel?.baseScale ?? this.baseScale};
+    }
 
-		if (existingCtx) return existingCtx
+    protected playShootTone(): void {
+        const audioCtx = this.getAudioContext()
+        if (!audioCtx) return
 
-		try {
-			const AudioContextClass = window.AudioContext || window.webkitAudioContext
-			if (!AudioContextClass) return null
+        const durationSec = 0.1
+        const oscillator = audioCtx.createOscillator()
+        const gainNode = audioCtx.createGain()
+        oscillator.type = 'square'
+        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime)
+        gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime)
+        gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.005)
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durationSec)
+        oscillator.connect(gainNode)
+        gainNode.connect(audioCtx.destination)
+        oscillator.start()
+        oscillator.stop(audioCtx.currentTime + durationSec)
+        oscillator.onended = () => {
+            oscillator.disconnect()
+            gainNode.disconnect()
+        }
+    }
 
-			const newCtx = new AudioContextClass()
-			window.audioCtx = newCtx
-			return newCtx
-		} catch (error) {
-			return null
-		}
-	}
+    protected getAudioContext(): AudioContext | null {
+        const phaserSound = this.scene.sound as { context?: AudioContext }
+        const existingCtx = phaserSound?.context || window.audioCtx
 
-	public getLevel(): number {
-		return this.level
-	}
+        if (existingCtx) return existingCtx
 
-	public canUpgrade(): boolean {
-		return this.level < this.maxLevel
-	}
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext
+            if (!AudioContextClass) return null
 
-	public upgrade(): boolean {
-		if (!this.canUpgrade()) return false
-		this.level++
-		this.applyLevelStats(this.level)
-		this.playUpgradeEffect()
-		return true
-	}
+            const newCtx = new AudioContextClass()
+            window.audioCtx = newCtx
+            return newCtx
+        } catch (error) {
+            return null
+        }
+    }
 
-	protected applyLevelStats(level: number): void {
-		const typeAny = this.type as any
-		const levelDefs = typeAny.levels
-		if (Array.isArray(levelDefs) && levelDefs[level - 1]) {
-			const def = levelDefs[level - 1]
-			this.range = def.range ?? this.range
-			this.fireRateMs = def.fireRateMs ?? this.fireRateMs
-			this.damage = def.damage ?? this.damage
-		} else {
-			// fallback: exponential multipliers per level above 1
-			const lvl = level - 1
-			this.range = (this.type.range) * Math.pow(1.08, lvl)
-			this.damage = (this.type.damage) * Math.pow(1.18, lvl)
+    public getLevel(): number {
+        return this.level
+    }
 
-			this.fireRateMs = Math.max(50, (this.type.fireRateMs) * Math.pow(0.92, lvl))
-		}
-	}
+    public canUpgrade(): boolean {
+        return this.level < this.maxLevel()
+    }
+
+    public upgrade(): boolean {
+
+        if (!this.canUpgrade()) {
+            return false;
+        }
+
+        const levelUpdate = this.getCurrentLevel();
+
+        if (levelUpdate === null) {
+            return false;
+        }
+
+        this.upgradeStats(levelUpdate);
+        this.playUpgradeEffect();
+
+        return true
+    }
+
+    protected upgradeStats(upgrade: TowerLevelUpgrade): void {
+
+        this.level++;
+        this.range = upgrade.range;
+        this.fireRateMs = upgrade.fireRateMs;
+        this.damage = upgrade.damage;
+        this.sprite.setScale(upgrade.baseScale);
+    }
+
+    protected maxLevel()
+    {
+        return this.type.levels.size + 1
+    }
 
 	protected playUpgradeEffect(): void {
 		this.scene.tweens.add({
