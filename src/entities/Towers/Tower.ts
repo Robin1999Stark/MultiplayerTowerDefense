@@ -1,12 +1,14 @@
 import Phaser from 'phaser'
 import { Enemy } from '../Factories/EnemyFactory'
 import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
+import { AudioManager } from '../../services/AudioManager'
 
 export class Tower {
 
     public sprite: Phaser.GameObjects.Sprite
     protected scene: Phaser.Scene
     public readonly type: TowerType
+    private audioManager: AudioManager
 
     protected range: number = 0
     protected fireRateMs: number = 0
@@ -21,6 +23,9 @@ export class Tower {
         this.type = type;
         this.sprite = scene.add.sprite(x, y, 'tower_basic');
         this.sprite.setDepth(2);
+        
+        // Initialize audio manager
+        this.audioManager = AudioManager.getInstance();
 
         const levelUpdate = this.getCurrentStats();
 
@@ -102,6 +107,9 @@ export class Tower {
     }
 
     protected playShootTone(): void {
+        // Don't play sound if muted
+        if (this.audioManager.isMuted()) return
+        
         const audioCtx = this.getAudioContext()
         if (!audioCtx) return
 

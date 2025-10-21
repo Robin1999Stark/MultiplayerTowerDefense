@@ -1,13 +1,16 @@
 import Phaser from 'phaser'
+import { AudioManager } from '../services/AudioManager'
 
 export class StartScene extends Phaser.Scene {
 	static KEY = 'StartScene'
 	private audioContext?: AudioContext
 	private musicNodes: AudioNode[] = []
 	private musicGain?: GainNode
+	private audioManager: AudioManager
 
 	constructor() {
 		super(StartScene.KEY)
+		this.audioManager = AudioManager.getInstance()
 	}
 
 	create(): void {
@@ -16,6 +19,11 @@ export class StartScene extends Phaser.Scene {
 
 		// Background
 		this.cameras.main.setBackgroundColor('#0b1020')
+		
+		// Add 'M' key listener to toggle mute
+		this.input.keyboard?.on('keydown-M', () => {
+			this.audioManager.toggleMute()
+		})
 
 		// Start epic music after a brief delay to ensure audio context is ready
 		this.time.delayedCall(100, () => {
@@ -68,7 +76,8 @@ export class StartScene extends Phaser.Scene {
 			'• Defend your base from waves of enemies',
 			'• Earn gold by defeating enemies',
 			'',
-			'TIP: Towers cannot be placed on the path!'
+			'TIP: Towers cannot be placed on the path!',
+			'Press M to mute the ugly Sound',
 		]
 
 		instructions.forEach((line, index) => {
@@ -246,6 +255,9 @@ export class StartScene extends Phaser.Scene {
 	}
 
 	private playStartSound(): void {
+		// Don't play sound if muted
+		if (this.audioManager.isMuted()) return
+		
 		const ctx = this.audioContext || this.getAudioContext()
 		if (!ctx) return
 
@@ -337,7 +349,9 @@ export class StartScene extends Phaser.Scene {
 		}
 		
 		this.musicGain = ctx.createGain()
-		this.musicGain.gain.setValueAtTime(0.3, ctx.currentTime)
+		// Set initial gain based on mute state
+		const initialGain = this.audioManager.isMuted() ? 0 : 0.3
+		this.musicGain.gain.setValueAtTime(initialGain, ctx.currentTime)
 		this.musicGain.connect(ctx.destination)
 		
 		console.log('Starting music, audio context state:', ctx.state)

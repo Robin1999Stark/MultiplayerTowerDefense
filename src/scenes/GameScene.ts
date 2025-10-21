@@ -4,6 +4,7 @@ import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 import { Tower } from "../entities/Towers/Tower";
 import { TowerFactory } from "../entities/Towers/TowerFactory";
 import { WaveFactory } from "../entities/Factories/WaveFactory";
+import { AudioManager } from "../services/AudioManager";
 
 export const GAME_EVENTS = {
 	placeTowerToggle: 'ui.placeTowerToggle',
@@ -28,12 +29,14 @@ export class GameScene extends Phaser.Scene {
 	private selectedTowerType: TowerType | null = null
 	private ghostTower?: Phaser.GameObjects.Sprite | undefined
 	private waveFactory!: WaveFactory
+	private audioManager: AudioManager
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
 
 	constructor() {
 		super(GameScene.KEY)
 		this.towerStore = TowerStore.getInstance()
+		this.audioManager = AudioManager.getInstance()
 	}
 
 	preload(): void {
@@ -85,6 +88,11 @@ export class GameScene extends Phaser.Scene {
 
 	create(): void {
 		this.cameras.main.setBackgroundColor('#0b1020')
+		
+		// Add 'm' key listener to toggle mute
+		this.input.keyboard.on('keydown-M', () => {
+			this.audioManager.toggleMute()
+		})
 
 		// Add background image scaled to game size
 		const bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background')

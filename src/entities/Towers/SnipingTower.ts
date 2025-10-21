@@ -2,11 +2,13 @@ import Phaser from 'phaser'
 import { OrcGrunt } from '../Units/OrcGrunt'
 import { Tower } from './Tower'
 import { TowerType } from "../../services/TowerStore";
+import { AudioManager } from '../../services/AudioManager';
 
 export class SnipingTower extends Tower {
 
     private timeSinceSnipe = 0
     private readonly laserEffect?: Phaser.GameObjects.Graphics
+    private audioManager: AudioManager
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         super(scene, x, y, type)
@@ -18,6 +20,9 @@ export class SnipingTower extends Tower {
         
         this.laserEffect = scene.add.graphics()
         this.laserEffect.setDepth(3)
+        
+        // Initialize the audio manager
+        this.audioManager = AudioManager.getInstance()
     }
 
     override update(deltaMs: number, enemies: OrcGrunt[]): void {
@@ -92,6 +97,9 @@ export class SnipingTower extends Tower {
     }
 
     private playSnipeSound(): void {
+        // If audio is muted, don't play the sound
+        if (this.audioManager.isMuted()) return
+        
         const scene = this.sprite.scene
         const sm = scene.sound as Phaser.Sound.WebAudioSoundManager
         const ctx: AudioContext | undefined = sm?.context || (window as Window & { audioCtx?: AudioContext }).audioCtx

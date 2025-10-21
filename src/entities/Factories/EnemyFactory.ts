@@ -10,6 +10,7 @@ import { Skeleton } from '../Units/Skeleton';
 import { Unicorn } from '../Units/Unicorn';
 import { Zombie } from '../Units/Zombie';
 import { GAME_EVENTS } from '../../scenes/GameScene';
+import { AudioManager } from '../../services/AudioManager';
 
 export interface Enemy {
     sprite: Phaser.Physics.Arcade.Sprite;
@@ -29,10 +30,12 @@ export class EnemyFactory {
     private enemies: Enemy[] = [];
     private spawnTimer?: Phaser.Time.TimerEvent;
     private readonly pathPoints: Phaser.Math.Vector2[] = [];
+    private audioManager: AudioManager;
 
     constructor(scene: Phaser.Scene, pathPoints: Phaser.Math.Vector2[]) {
         this.scene = scene;
         this.pathPoints = pathPoints;
+        this.audioManager = AudioManager.getInstance();
     }
 
     public getEnemies(): Enemy[] {
@@ -176,6 +179,9 @@ export class EnemyFactory {
     }
 
     public playPlop(): void {
+        // Don't play sound if muted
+        if (this.audioManager.isMuted()) return;
+        
         const audioCtx = this.getAudioContext();
         if (!audioCtx) return;
 

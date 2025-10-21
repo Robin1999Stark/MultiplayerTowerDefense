@@ -2,16 +2,21 @@ import Phaser from 'phaser'
 import { Tower } from './Tower'
 import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
 import { Enemy } from '../Factories/EnemyFactory'
+import { AudioManager } from '../../services/AudioManager'
 
 export class FrostTower extends Tower {
 
     protected slowDownMs: number = 0
+    private audioManager: AudioManager
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		super(scene, x, y, type)
 		this.sprite.setTexture('tower_frost')
 		this.sprite.setScale(0.1)
         this.slowDownMs = this.getCurrentStats()?.slowDownMs ?? 5000;
+        
+        // Initialize audio manager
+        this.audioManager = AudioManager.getInstance();
 	}
 
 	protected override shoot(target: Enemy): void {
@@ -44,6 +49,9 @@ export class FrostTower extends Tower {
 	}
 
 	protected override playShootTone(): void {
+		// Don't play sound if muted
+		if (this.audioManager.isMuted()) return
+		
 		const audioCtx = this.getAudioContext()
 		if (!audioCtx) return
 
