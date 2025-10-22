@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { GAME_EVENTS } from './GameScene'
 import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
+import { Event } from '../entities/Events/Event'
+import { EventStore } from '../services/EventStore'
 
 export class UIScene extends Phaser.Scene {
 	static KEY = 'UIScene'
@@ -10,12 +12,16 @@ export class UIScene extends Phaser.Scene {
 	private waveLabel: HTMLElement | null = null
 	private placing = false
 	private towerStore: TowerStore
+	private eventStore: EventStore
 	private towerStoreContainer?: Phaser.GameObjects.Container
+	private eventStoreContainer?: Phaser.GameObjects.Container
 	private selectedTowerType: TowerType | null = null
+	private selectedEvent: Event | null = null
 
 	constructor() {
 		super(UIScene.KEY)
 		this.towerStore = TowerStore.getInstance()
+		this.eventStore = EventStore.getInstance()
 	}
 
 	preload(): void {
@@ -26,21 +32,54 @@ export class UIScene extends Phaser.Scene {
 		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
 		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
+		
+		// Create event icon
+		const g = this.add.graphics()
+		g.clear()
+		g.fillStyle(0x00aaff, 1)
+		g.fillRoundedRect(0, 0, 32, 32, 8)
+		g.generateTexture('event_slow', 32, 32)
+		
+		// Create coin icon for costs
+		g.clear()
+		g.fillStyle(0xffd700, 1) // Gold color
+		g.fillCircle(8, 8, 8)    // Coin circle
+		g.lineStyle(1, 0xffff00, 1)
+		g.strokeCircle(8, 8, 8)  // Coin outline
+		g.generateTexture('coin_icon', 16, 16)
+		g.destroy()
 	}
 
 	create(): void {
 		this.tryBindDom()
 		this.createTowerStoreUI()
+		this.createEventStoreUI()
 
 		// Listen for tower type selection events
 		this.game.events.on(GAME_EVENTS.towerTypeSelected, (towerType: TowerType | null) => {
 			this.selectedTowerType = towerType
+			this.selectedEvent = null
 			this.updateTowerStoreUI()
+			this.updateEventStoreUI()
+		})
+		
+		// Listen for event type selection events
+		this.game.events.on(GAME_EVENTS.eventTypeSelected, (event: Event | null) => {
+			this.selectedEvent = event
+			this.selectedTowerType = null
+			this.updateTowerStoreUI()
+			this.updateEventStoreUI()
 		})
 
 		// Listen for gold changes to update affordability
 		this.game.events.on(GAME_EVENTS.goldChanged, () => {
 			this.updateTowerStoreUI()
+			this.updateEventStoreUI()
+		})
+		
+		// Listen for event activation to update UI
+		this.game.events.on(GAME_EVENTS.eventActivated, () => {
+			this.updateEventStoreUI()
 		})
 	}
 
@@ -119,6 +158,124 @@ export class UIScene extends Phaser.Scene {
 		escText.setOrigin(1, 1)
 		escText.setDepth(1001)
 		this.towerStoreContainer.add(escText)
+	}
+	
+	private createEventStoreUI(): void {
+		const padding = 10
+		const cardWidth = 80
+		const cardHeight = 56
+		const cardSpacing = 6
+
+		// Create container for all event cards
+		this.eventStoreContainer = this.add.container(0, 0)
+		this.eventStoreContainer.setDepth(1000)
+
+		const events = this.eventStore.getAllEventTypes()
+
+		// Position cards horizontally from left to right at the bottom
+		const startY = this.scale.height - padding - cardHeight
+		const startX = padding
+
+		events.forEach((event, index) => {
+			const x = startX + index * (cardWidth + cardSpacing)
+			this.createEventCard(event, x, startY, cardWidth, cardHeight)
+		})
+
+		// Add title above the cards
+		const titleX = startX
+		const titleY = startY - 8
+		const titleText = this.add.text(titleX, titleY, 'EVENTS', {
+			fontSize: '10px',
+			color: '#00aaff',
+			fontFamily: 'monospace',
+			fontStyle: 'bold'
+		})
+		titleText.setOrigin(0, 1)
+		titleText.setDepth(1001)
+		this.eventStoreContainer.add(titleText)
+	}
+	
+	private createEventCard(event: Event, x: number, y: number, width: number, height: number): void {
+		const cardContainer = this.add.container(x, y)
+
+		// Background
+		const bg = this.add.rectangle(0, 0, width, height, 0x1a1a2e, 0.95)
+		bg.setOrigin(0, 0)
+		bg.setStrokeStyle(1.5, 0x333333)
+		bg.setName('bg')
+		cardContainer.add(bg)
+
+		// Event icon
+		const iconSprite = this.add.sprite(width / 2, 24, event.icon)
+		iconSprite.setScale(0.15)
+		iconSprite.setName('icon')
+		cardContainer.add(iconSprite)
+		
+		// Active indicator (initially invisible)
+		const activeIndicator = this.add.graphics()
+		activeIndicator.fillStyle(0x00ff00, 0.3)
+		activeIndicator.fillCircle(width / 2, 24, 15)
+		activeIndicator.setVisible(false)
+		activeIndicator.setName('active_indicator')
+		cardContainer.add(activeIndicator)
+
+		// Hotkey indicator above the event icon
+		const keyText = this.add.text(width / 2, 12, `[${event.key}]`, {
+			fontSize: '11px',
+			color: '#00d4ff',
+			fontFamily: 'monospace',
+			fontStyle: 'bold'
+		})
+		keyText.setOrigin(0.5, 0)
+		cardContainer.add(keyText)
+
+		// Event name
+		const nameText = this.add.text(width / 2, 37, event.name, {
+			fontSize: '8px',
+			color: '#ffffff',
+			fontFamily: 'monospace',
+			fontStyle: 'bold'
+		})
+		nameText.setOrigin(0.5, 0)
+		cardContainer.add(nameText)
+
+		// Cost with coin icon
+		const coinIcon = this.add.image(width / 2 - 10, 45, 'coin_icon')
+		coinIcon.setScale(0.8)
+		coinIcon.setOrigin(0.5)
+		coinIcon.setName('coin_icon')
+		
+		const costText = this.add.text(width / 2 + 5, 45, `${event.cost}`, {
+			fontSize: '8px',
+			color: '#ffd700',
+			fontFamily: 'monospace',
+			fontStyle: 'bold'
+		})
+		costText.setOrigin(0, 0.5)
+		costText.setName('cost')
+		
+		cardContainer.add(coinIcon)
+		cardContainer.add(costText)
+
+		// Duration
+		const durationText = this.add.text(width / 2, 55, `Duration: ${event.duration / 1000}s`, {
+			fontSize: '6px',
+			color: '#aaaaaa',
+			fontFamily: 'monospace'
+		})
+		durationText.setOrigin(0.5, 0)
+		cardContainer.add(durationText)
+
+		cardContainer.setData('event', event)
+		cardContainer.setName(`event_${event.id}`)
+		this.eventStoreContainer?.add(cardContainer)
+		
+		// Make the card interactive
+		bg.setInteractive({ useHandCursor: true })
+		bg.on('pointerdown', () => {
+			const gameScene = this.scene.get('GameScene') as Phaser.Scene
+			gameScene.events.emit(GAME_EVENTS.eventTypeSelected, event)
+		})
 	}
 
 	private createTowerCard(towerType: TowerType, x: number, y: number, width: number, height: number): void {
@@ -249,6 +406,64 @@ export class UIScene extends Phaser.Scene {
 						textChild.setAlpha(canAfford ? 1 : 0.5)
 					}
 					if (textChild instanceof Phaser.GameObjects.Sprite) {
+						textChild.setAlpha(canAfford ? 1 : 0.4)
+					}
+				})
+			}
+		})
+	}
+	
+	private updateEventStoreUI(): void {
+		if (!this.eventStoreContainer) return
+
+		const gold = this.registry.get('gold') as number || 0
+		const gameScene = this.scene.get('GameScene') as any
+
+		this.eventStoreContainer.iterate((child: Phaser.GameObjects.GameObject) => {
+			if (child instanceof Phaser.GameObjects.Container) {
+				const event = child.getData('event') as Event
+				if (!event) return
+
+				const canAfford = gold >= event.cost
+				const isSelected = this.selectedEvent?.id === event.id
+				const isActive = gameScene.isEventActive && gameScene.isEventActive(event.id)
+
+				// Update active indicator
+				const activeIndicator = child.getByName('active_indicator') as Phaser.GameObjects.Graphics
+				if (activeIndicator) {
+					activeIndicator.setVisible(isActive)
+				}
+
+				// Update background
+				const bg = child.getByName('bg') as Phaser.GameObjects.Rectangle
+				if (bg) {
+					if (isActive) {
+						bg.setStrokeStyle(2, 0x00ff00)
+						bg.setFillStyle(0x2a4a2e, 0.95)
+					} else if (isSelected) {
+						bg.setStrokeStyle(2, 0x00ff00)
+						bg.setFillStyle(0x2a4a2e, 0.95)
+					} else if (canAfford) {
+						bg.setStrokeStyle(1.5, 0x00d4ff)
+						bg.setFillStyle(0x1a1a2e, 0.95)
+					} else {
+						bg.setStrokeStyle(1.5, 0x333333)
+						bg.setFillStyle(0x1a1a2e, 0.6)
+					}
+				}
+
+				// Update cost text color
+				const costText = child.getByName('cost') as Phaser.GameObjects.Text
+				if (costText) {
+					costText.setColor(canAfford ? '#ffd700' : '#666666')
+				}
+
+				// Update all text opacity
+				child.iterate((textChild: Phaser.GameObjects.GameObject) => {
+					if (textChild instanceof Phaser.GameObjects.Text) {
+						textChild.setAlpha(canAfford ? 1 : 0.5)
+					}
+					if (textChild instanceof Phaser.GameObjects.Sprite && textChild.name !== 'icon') {
 						textChild.setAlpha(canAfford ? 1 : 0.4)
 					}
 				})

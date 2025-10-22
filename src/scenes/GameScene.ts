@@ -4,6 +4,8 @@ import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 import { Tower } from "../entities/Towers/Tower";
 import { TowerFactory } from "../entities/Towers/TowerFactory";
 import { WaveFactory } from "../entities/Factories/WaveFactory";
+import { Event } from "../entities/Events/Event";
+import { EventStore } from "../services/EventStore";
 
 export const GAME_EVENTS = {
 	placeTowerToggle: 'ui.placeTowerToggle',
@@ -14,6 +16,8 @@ export const GAME_EVENTS = {
 	towerBuilt: 'game.towerBuilt',
 	towerTypeSelected: 'game.towerTypeSelected',
 	towerUpgraded: 'game.towerUpgraded',
+	eventTypeSelected: 'game.eventTypeSelected',
+	eventActivated: 'game.eventActivated',
 } as const
 
 export class GameScene extends Phaser.Scene {
@@ -25,7 +29,10 @@ export class GameScene extends Phaser.Scene {
 	private gold = 100
 	private lives = 20
 	private towerStore: TowerStore
+	private eventStore: EventStore
 	private selectedTowerType: TowerType | null = null
+	private selectedEvent: Event | null = null
+	private activeEvents: Event[] = []
 	private ghostTower?: Phaser.GameObjects.Sprite | undefined
 	private waveFactory!: WaveFactory
 
@@ -34,6 +41,7 @@ export class GameScene extends Phaser.Scene {
 	constructor() {
 		super(GameScene.KEY)
 		this.towerStore = TowerStore.getInstance()
+		this.eventStore = EventStore.getInstance()
 	}
 
 	preload(): void {
@@ -60,10 +68,15 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('background', 'assets/background.jpeg')
 		this.load.image('floor_tile', 'assets/floor_tile.jpeg')
 		this.load.image('upgrade_arrow', 'assets/indicators/upgrade_arrow.png')
-
-
+		
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
+		
+		// Create event icon
+		g.clear()
+		g.fillStyle(0x00aaff, 1)
+		g.fillRoundedRect(0, 0, 32, 32, 8)
+		g.generateTexture('event_slow', 32, 32)
 		// OrcGrunt texture
 		g.clear()
 		g.fillStyle(0xff4757, 1)
@@ -163,14 +176,38 @@ export class GameScene extends Phaser.Scene {
 
 		// Subscribe to UI toggle for placing towers (deprecated, keeping for backwards compatibility)
 		this.game.events.on(GAME_EVENTS.placeTowerToggle, this.onPlaceTowerToggle, this)
+		
+		// Subscribe to event selection from UI
+		this.game.events.on(GAME_EVENTS.eventTypeSelected, (event: Event | null) => {
+			this.selectEvent(event)
+		})
+		
+		// Subscribe to event activation from UI
+		this.game.events.on(GAME_EVENTS.eventActivated, () => {
+			if (this.selectedEvent) {
+				this.activateSelectedEvent()
+			}
+		})
 
-		// Keyboard input for tower selection
+		// Keyboard input for tower and event selection
 		this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
 			const towerType = this.towerStore.getTowerTypeByKey(event.key)
+			const eventType = this.eventStore.getEventByKey(event.key)
+			
 			if (towerType) {
 				this.selectTowerType(towerType)
+			} else if (eventType) {
+				// Immediately select and activate the event when its key is pressed
+				this.selectEvent(eventType)
+				this.activateSelectedEvent()
 			} else if (event.key === 'Escape') {
 				this.deselectTowerType()
+				this.selectEvent(null)
+			} else if (event.key === 'Enter' || event.key === ' ') {
+				// Activate selected event on Enter or Space (kept for backward compatibility)
+				if (this.selectedEvent) {
+					this.activateSelectedEvent()
+				}
 			}
 		})
 
@@ -190,11 +227,17 @@ export class GameScene extends Phaser.Scene {
 			}
 		})
 
-		// Input to place a tower when in placement mode
+		// Input to place a tower or activate an event
 		this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
 
 			const clickedTower = this.findTowerAt(pointer.worldX, pointer.worldY)
 			if (clickedTower) {
+				return
+			}
+
+			// If an event is selected, activate it
+			if (this.selectedEvent) {
+				this.activateSelectedEvent()
 				return
 			}
 
@@ -250,10 +293,105 @@ export class GameScene extends Phaser.Scene {
 		for (const tower of this.towers) {
 			tower.update(delta, this.waveFactory.getEnemies());
 		}
+		
+		// Update active events
+		for (let i = this.activeEvents.length - 1; i >= 0; i--) {
+			const event = this.activeEvents[i];
+
+            if (!event) {
+                continue;
+            }
+
+			event.update(delta, this);
+			
+			// Remove event if it's no longer active
+			if (!event.isActive()) {
+				this.activeEvents.splice(i, 1);
+				
+				// Notify UI that event has ended
+				this.game.events.emit(GAME_EVENTS.eventActivated, null);
+			}
+		}
 
 		// Sort towers by Y position for proper depth ordering
 		this.sortTowersByDepth();
 		this.updateUpgradeIndicators();
+	}
+	
+	// Method to check if a specific event type is active
+	public isEventActive(eventId: string): boolean {
+		return this.activeEvents.some(event => event.id === eventId);
+	}
+	
+	// Method to get enemies for events
+	public getEnemies() {
+		return this.waveFactory.getEnemies();
+	}
+	
+	// Method to select an event
+	public selectEvent(event: Event | null): void {
+		this.selectedEvent = event;
+		this.selectedTowerType = null; // Deselect tower if an event is selected
+		
+		// Emit event selection event
+		this.game.events.emit(GAME_EVENTS.eventTypeSelected, event);
+	}
+	
+	// Method to activate the selected event
+	public activateSelectedEvent(): void {
+		if (!this.selectedEvent) return;
+		
+		// Check if player has enough gold
+		if (this.gold < this.selectedEvent.cost) return;
+		
+		// Deduct gold and activate event
+		this.gold -= this.selectedEvent.cost;
+		this.emitGold();
+		
+		// Activate the event
+		this.selectedEvent.activate(this);
+		this.activeEvents.push(this.selectedEvent);
+		
+		// Show activation message
+		this.showEventActivationMessage(this.selectedEvent);
+		
+		// Emit event activated event
+		this.game.events.emit(GAME_EVENTS.eventActivated, this.selectedEvent);
+		
+		// Deselect the event
+		this.selectEvent(null);
+	}
+	
+	// Display a temporary message when an event is activated
+	private showEventActivationMessage(event: Event): void {
+		// Create a text message that appears briefly when an event is activated
+		const text = this.add.text(
+			this.scale.width / 2, 
+			this.scale.height / 4, 
+			`${event.name} Activated!`, 
+			{
+				fontFamily: 'Arial',
+				fontSize: '24px',
+				color: '#ffffff',
+				stroke: '#000000',
+				strokeThickness: 4,
+				shadow: { color: '#000000', blur: 10, stroke: true, fill: true }
+			}
+		)
+		text.setOrigin(0.5)
+		text.setDepth(1000)
+		
+		// Fade in and out animation
+		this.tweens.add({
+			targets: text,
+			alpha: { from: 0, to: 1 },
+			duration: 500,
+			yoyo: true,
+			hold: 1000,
+			onComplete: () => {
+				text.destroy()
+			}
+		})
 	}
 
 	private onPlaceTowerToggle = (enabled: boolean) => {
