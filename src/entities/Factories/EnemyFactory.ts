@@ -29,6 +29,7 @@ export class EnemyFactory {
     private enemies: Enemy[] = [];
     private spawnTimer?: Phaser.Time.TimerEvent;
     private readonly pathPoints: Phaser.Math.Vector2[] = [];
+    private goldEarningFunction: (isBoss: boolean) => number = (isBoss: boolean) => isBoss ? 100 : 10;
 
     constructor(scene: Phaser.Scene, pathPoints: Phaser.Math.Vector2[]) {
         this.scene = scene;
@@ -37,6 +38,14 @@ export class EnemyFactory {
 
     public getEnemies(): Enemy[] {
         return this.enemies;
+    }
+    
+    public getGoldEarningFunction(): (isBoss: boolean) => number {
+        return this.goldEarningFunction;
+    }
+    
+    public setGoldEarningFunction(func: (isBoss: boolean) => number): void {
+        this.goldEarningFunction = func;
     }
 
     public startWave(wave: number): void {
@@ -95,7 +104,7 @@ export class EnemyFactory {
             
             if (enemy.isDead()) {
                 const isBoss = enemy.sprite.texture.key === 'orc_warrior';
-                goldEarned += isBoss ? 100 : 10;
+                goldEarned += this.goldEarningFunction(isBoss);
                 this.playPlop();
                 this.removeEnemy(enemy);
                 continue;

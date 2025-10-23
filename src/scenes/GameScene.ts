@@ -71,20 +71,7 @@ export class GameScene extends Phaser.Scene {
 
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
-		
-		// Create event icons
-		g.clear()
-		g.fillStyle(0x00aaff, 1)
-		g.fillRoundedRect(0, 0, 32, 32, 8)
-		g.generateTexture('event_slow', 32, 32)
-		
-		// Create area damage event icon
-		g.clear()
-		g.fillStyle(0xff0000, 1)
-		g.fillCircle(16, 16, 16)
-		g.lineStyle(2, 0xffff00, 1)
-		g.strokeCircle(16, 16, 12)
-		g.generateTexture('event_area_damage', 32, 32)
+
 		// OrcGrunt texture
 		g.clear()
 		g.fillStyle(0xff4757, 1)
@@ -334,6 +321,11 @@ export class GameScene extends Phaser.Scene {
 	// Method to get enemies for events
 	public getEnemies() {
 		return this.waveFactory.getEnemies();
+	}
+	
+	// Method to get enemy factory for events
+	public getEnemyFactory() {
+		return this.waveFactory.getEnemyFactory();
 	}
 	
 	// Method to select an event

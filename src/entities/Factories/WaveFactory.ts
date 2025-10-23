@@ -41,6 +41,13 @@ export class WaveFactory {
     public getEnemies(): Enemy[] {
         return this.enemyFactory.getEnemies();
     }
+    
+    /**
+     * Gets the enemy factory
+     */
+    public getEnemyFactory(): EnemyFactory {
+        return this.enemyFactory;
+    }
 
     /**
      * Starts the specified wave

@@ -36,13 +36,28 @@ export class UIScene extends Phaser.Scene {
 		// Load effect icons
 		this.load.image('effect_freezing', 'assets/effects/freeze_effect_icon.jpeg')
 		this.load.image('effect_area_damage', 'assets/effects/area_damage_effect_icon.jpeg')
+		this.load.image('effect_gold_rush', 'assets/effects/gold_rush_effect_icon.jpeg')
 
 		// Create event icon (fallback)
 		const g = this.add.graphics()
+
 		g.clear()
 		g.fillStyle(0x00aaff, 1)
 		g.fillRoundedRect(0, 0, 32, 32, 8)
 		g.generateTexture('event_slow', 32, 32)
+
+        // Create area damage event icon
+        g.clear()
+        g.fillStyle(0xff0000, 1)
+        g.fillCircle(16, 16, 16)
+        g.lineStyle(2, 0xffff00, 1)
+        g.strokeCircle(16, 16, 12)
+        g.generateTexture('event_area_damage', 32, 32)
+
+        g.clear()
+        g.fillStyle(0x00aaff, 1)
+        g.fillRoundedRect(0, 0, 32, 32, 8)
+        g.generateTexture('event_gold_rush', 32, 32)
 		
 		// Create coin icon for costs
 		g.clear()
@@ -195,22 +210,12 @@ export class UIScene extends Phaser.Scene {
 		bg.setName('bg')
 		cardContainer.add(bg)
 
-		// Event icon as background
-		if (event.icon === 'effect_freezing' || event.icon === 'effect_area_damage') {
-			const iconBg = this.add.image(0, 0, event.icon)
-			iconBg.setDisplaySize(width, height)
-			iconBg.setOrigin(0, 0)
-			iconBg.setAlpha(0.7)
-			cardContainer.add(iconBg)
-		} else {
-			// For other icons, use the standard approach
-			const iconSprite = this.add.sprite(width / 2, height / 2 - 5, event.icon)
-			iconSprite.setScale(0.15)
-			iconSprite.setName('icon')
-			cardContainer.add(iconSprite)
-		}
-		
-		// Active indicator (initially invisible)
+        const iconBg = this.add.image(0, 0, event.icon)
+        iconBg.setDisplaySize(width, height)
+        iconBg.setOrigin(0, 0)
+        iconBg.setAlpha(0.7)
+        cardContainer.add(iconBg)
+
 		const activeIndicator = this.add.graphics()
 		activeIndicator.fillStyle(0x00ff00, 0.3)
 		activeIndicator.fillCircle(width / 2, height / 2, width / 4)
@@ -218,7 +223,6 @@ export class UIScene extends Phaser.Scene {
 		activeIndicator.setName('active_indicator')
 		cardContainer.add(activeIndicator)
 
-		// Cost with coin icon at the top
 		const coinIcon = this.add.image(width / 2 - 8, 10, 'coin_icon')
 		coinIcon.setScale(0.6)
 		coinIcon.setOrigin(0.5)
@@ -238,8 +242,7 @@ export class UIScene extends Phaser.Scene {
 		cardContainer.add(coinIcon)
 		cardContainer.add(costText)
 
-		// Key indicator in the middle
-		const keyText = this.add.text(width / 2, height / 2, `${event.key}`, {
+		const keyText = this.add.text(width / 2, height / 2, `[${event.key}]`, {
 			fontSize: '10px',
 			color: '#00d4ff',
 			fontFamily: 'monospace',
