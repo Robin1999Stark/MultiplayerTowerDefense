@@ -2,7 +2,6 @@ import Phaser from 'phaser'
 import { Tower } from './Tower'
 import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
 import { Enemy } from '../Factories/EnemyFactory'
-import { AudioManager } from '../../services/AudioManager'
 
 export class FrostTower extends Tower {
 

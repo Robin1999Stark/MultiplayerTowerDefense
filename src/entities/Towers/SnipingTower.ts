@@ -2,7 +2,6 @@ import Phaser from 'phaser'
 import { OrcGrunt } from '../Units/OrcGrunt'
 import { Tower } from './Tower'
 import { TowerType } from "../../services/TowerStore";
-import { AudioManager } from '../../services/AudioManager';
 
 export class SnipingTower extends Tower {
 
