@@ -62,11 +62,11 @@ export class OrcGrunt implements Enemy {
 		this.hp -= amount
 	}
 
-	applySlow(durationMs: number): void {
+	applySlow(durationMs: number, slowFactor: number = 0.5): void {
 		this.slowTimer = 0
 		this.slowDuration = durationMs
 		this.isSlowed = true
-		this.speed = this.baseSpeed * 0.5 // Half speed
+		this.speed = this.baseSpeed * slowFactor
 		this.sprite.setTint(0x00aaff) // Blue tint for slowed enemies
 	}
 

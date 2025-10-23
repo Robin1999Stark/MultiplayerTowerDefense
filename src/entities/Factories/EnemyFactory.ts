@@ -7,8 +7,10 @@ import { Cultist } from '../Units/Cultist';
 import { Demon } from '../Units/Demon';
 import { Imp } from '../Units/Imp';
 import { Skeleton } from '../Units/Skeleton';
+import { SkeletonArcher } from '../Units/SkeletonArcher';
 import { Unicorn } from '../Units/Unicorn';
 import { Zombie } from '../Units/Zombie';
+import { TowerAttacker } from '../Units/TowerAttacker';
 import { GAME_EVENTS } from '../../scenes/GameScene';
 import { AudioManager } from '../../services/AudioManager';
 
@@ -22,7 +24,7 @@ export interface Enemy {
     takeDamage(amount: number): void;
     isDead(): boolean;
     destroy(): void;
-    applySlow?(durationMs: number): void;
+    applySlow?(durationMs: number, slowFactor: number): void;
 }
 
 export class EnemyFactory {
@@ -30,6 +32,7 @@ export class EnemyFactory {
     private enemies: Enemy[] = [];
     private spawnTimer?: Phaser.Time.TimerEvent;
     private readonly pathPoints: Phaser.Math.Vector2[] = [];
+    private goldEarningFunction: (isBoss: boolean) => number = (isBoss: boolean) => isBoss ? 100 : 10;
     private audioManager: AudioManager;
 
     constructor(scene: Phaser.Scene, pathPoints: Phaser.Math.Vector2[]) {
@@ -40,6 +43,14 @@ export class EnemyFactory {
 
     public getEnemies(): Enemy[] {
         return this.enemies;
+    }
+
+    public getGoldEarningFunction(): (isBoss: boolean) => number {
+        return this.goldEarningFunction;
+    }
+
+    public setGoldEarningFunction(func: (isBoss: boolean) => number): void {
+        this.goldEarningFunction = func;
     }
 
     public startWave(wave: number): void {
@@ -70,6 +81,8 @@ export class EnemyFactory {
             Demon,
             Imp,
             Skeleton,
+            SkeletonArcher,
+            TowerAttacker,
             Unicorn,
             Zombie
         ];
@@ -98,7 +111,7 @@ export class EnemyFactory {
             
             if (enemy.isDead()) {
                 const isBoss = enemy.sprite.texture.key === 'orc_warrior';
-                goldEarned += isBoss ? 100 : 10;
+                goldEarned += this.goldEarningFunction(isBoss);
                 this.playPlop();
                 this.removeEnemy(enemy);
                 continue;
@@ -181,7 +194,7 @@ export class EnemyFactory {
     public playPlop(): void {
         // Don't play sound if muted
         if (this.audioManager.isMuted()) return;
-        
+
         const audioCtx = this.getAudioContext();
         if (!audioCtx) return;
 

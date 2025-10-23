@@ -7,6 +7,7 @@ import { AudioManager } from '../../services/AudioManager'
 export class FrostTower extends Tower {
 
     protected slowDownMs: number = 0
+    protected slowFactor: number = 0
     private audioManager: AudioManager
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
@@ -14,7 +15,8 @@ export class FrostTower extends Tower {
 		this.sprite.setTexture('tower_frost')
 		this.sprite.setScale(0.1)
         this.slowDownMs = this.getCurrentStats()?.slowDownMs ?? 5000;
-        
+        this.slowFactor = this.getCurrentStats()?.slowFactor ?? 0.5;
+
         // Initialize audio manager
         this.audioManager = AudioManager.getInstance();
 	}
@@ -43,7 +45,7 @@ export class FrostTower extends Tower {
 			duration,
 			onComplete: () => {
 				bullet.destroy();
-                target.applySlow && target.applySlow(this.slowDownMs);
+                target.applySlow && target.applySlow(this.slowDownMs, 0.5);
 			}
 		})
 	}
@@ -51,7 +53,7 @@ export class FrostTower extends Tower {
 	protected override playShootTone(): void {
 		// Don't play sound if muted
 		if (this.audioManager.isMuted()) return
-		
+
 		const audioCtx = this.getAudioContext()
 		if (!audioCtx) return
 
@@ -75,10 +77,10 @@ export class FrostTower extends Tower {
 	}
 
     protected override upgradeStats(upgrade: TowerLevelUpgrade): void {
-
         this.range = upgrade.range;
         this.fireRateMs = upgrade.fireRateMs;
         this.damage = upgrade.damage;
+        this.hp = upgrade.hp;
         this.sprite.setScale(upgrade.baseScale);
         this.slowDownMs = upgrade?.slowDownMs ?? 5000
     }

@@ -5,6 +5,8 @@ import { AudioManager } from '../../services/AudioManager'
 
 export class Tower {
 
+    private hpText?: Phaser.GameObjects.Text;
+
     public sprite: Phaser.GameObjects.Sprite
     protected scene: Phaser.Scene
     public readonly type: TowerType
@@ -14,6 +16,7 @@ export class Tower {
     protected fireRateMs: number = 0
     protected damage: number = 0
     protected timeSinceShot = 0
+    protected hp: number = 100
 
     protected level = 1
     protected baseScale = 0.08
@@ -34,7 +37,26 @@ export class Tower {
         }
 
         this.upgradeStats(levelUpdate);
+        this.createHPDisplay();
     }
+
+    private createHPDisplay(): void {
+        this.hpText = this.scene.add.text(
+            this.sprite.x,
+            this.sprite.y + 20,
+            this.buildHpText(),
+            {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        this.hpText.setOrigin(0.5);
+        this.hpText.setDepth(3);
+    }
+
 
     update(deltaMs: number, enemies: Enemy[]): void {
         this.timeSinceShot += deltaMs
@@ -43,6 +65,12 @@ export class Tower {
         if (!target) return
         this.timeSinceShot = 0
         this.shoot(target)
+        
+        // Update HP text position
+        if (this.hpText) {
+            this.hpText.setPosition(this.sprite.x, this.sprite.y + 20);
+            this.updateHPDisplay();
+        }
     }
 
     private findTarget(enemies: Enemy[]): Enemy | undefined {
@@ -168,6 +196,7 @@ export class Tower {
         this.level++;
         this.upgradeStats(levelUpdate);
         this.playUpgradeEffect();
+        this.updateHPDisplay();
 
         return true
     }
@@ -177,6 +206,7 @@ export class Tower {
         this.range = upgrade.range;
         this.fireRateMs = upgrade.fireRateMs;
         this.damage = upgrade.damage;
+        this.hp = upgrade.hp;
         this.sprite.setScale(upgrade.baseScale);
     }
 
@@ -199,4 +229,74 @@ export class Tower {
 			this.sprite.clearTint()
 		})
 	}
-} 
+
+	public takeDamage(amount: number): boolean {
+		this.hp -= amount;
+
+        this.updateHPDisplay();
+		
+		// Visual feedback for damage
+		this.sprite.setTintFill(0xff0000); // Red tint
+		this.scene.time.delayedCall(100, () => {
+			this.sprite.clearTint();
+		});
+		
+		// Check if tower is destroyed
+		if (this.hp <= 0) {
+			this.playDestroyEffect();
+			if (this.hpText) {
+				this.hpText.destroy();
+			}
+			return true;
+		}
+		
+		return false;
+	}
+
+	public getHP(): number {
+		return this.hp;
+	}
+
+	private playDestroyEffect(): void {
+		// Create explosion effect
+		const particles = this.scene.add.particles(this.sprite.x, this.sprite.y, 'bullet', {
+			speed: { min: 100, max: 200 },
+			angle: { min: 0, max: 360 },
+			scale: { start: 1, end: 0 },
+			lifespan: 800,
+			blendMode: 'ADD',
+			quantity: 20
+		});
+		
+		// Fade out the tower
+		this.scene.tweens.add({
+			targets: this.sprite,
+			alpha: 0,
+			scale: this.sprite.scale * 0.5,
+			duration: 300,
+			ease: 'Power2',
+			onComplete: () => {
+				particles.destroy();
+			}
+		});
+	}
+
+    private updateHPDisplay(): void {
+        if (this.hpText) {
+            this.hpText.setText(this.buildHpText());
+
+            const hpPercent = this.hp / 100;
+            if (hpPercent <= 0.25) {
+                this.hpText.setColor('#ff0000');
+            } else if (hpPercent <= 0.5) {
+                this.hpText.setColor('#ffff00');
+            } else {
+                this.hpText.setColor('#ffffff');
+            }
+        }
+    }
+
+    private buildHpText(): string {
+        return `HP: ${this.hp}`;
+    }
+}
