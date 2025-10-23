@@ -212,6 +212,38 @@ export class GameScene extends Phaser.Scene {
 		const tileH = 32
 		const tileScaleX = src ? tileW / (src as HTMLImageElement | HTMLCanvasElement).width : 1
 		const tileScaleY = src ? tileH / (src as HTMLImageElement | HTMLCanvasElement).height : 1
+		
+		// First, draw corner tiles at waypoints to fill gaps
+		for (let i = 1; i < this.pathPoints.length - 1; i++) {
+			const waypoint = this.pathPoints[i]!
+			const cornerTile = this.add.tileSprite(waypoint.x, waypoint.y, tileW, tileH, 'floor_tile')
+			cornerTile.setDepth(0)
+			cornerTile.setOrigin(0.5, 0.5)
+			cornerTile.tileScaleX = tileScaleX
+			cornerTile.tileScaleY = tileScaleY
+			
+			// Create a soft edge mask for corner tiles
+			const cornerMaskGfx = this.add.graphics()
+			cornerMaskGfx.setDepth(-1)
+			cornerMaskGfx.setPosition(waypoint.x, waypoint.y)
+			const halfW = tileW / 2
+			const halfH = tileH / 2
+			for (let y = -halfH; y <= halfH; y++) {
+				for (let x = -halfW; x <= halfW; x++) {
+					const distFromCenter = Math.sqrt(x * x + y * y)
+					const maxDist = Math.min(halfW, halfH)
+					const t = distFromCenter / maxDist
+					const alpha = Phaser.Math.Clamp(1 - t, 0, 1)
+					cornerMaskGfx.fillStyle(0xffffff, alpha)
+					cornerMaskGfx.fillRect(x, y, 1, 1)
+				}
+			}
+			const cornerMask = new Phaser.Display.Masks.BitmapMask(this, cornerMaskGfx)
+			cornerTile.setMask(cornerMask)
+			cornerMaskGfx.setVisible(false)
+		}
+		
+		// Then draw the line segments between waypoints
 		for (let i = 0; i < this.pathPoints.length - 1; i++) {
 			const a = this.pathPoints[i]!
 			const b = this.pathPoints[i + 1]!
