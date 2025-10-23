@@ -33,7 +33,10 @@ export class UIScene extends Phaser.Scene {
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
 		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
 		
-		// Create event icon
+		// Load effect icons
+		this.load.image('effect_freezing', 'assets/effects/freeze_effect_icon.jpeg')
+		
+		// Create event icon (fallback)
 		const g = this.add.graphics()
 		g.clear()
 		g.fillStyle(0x00aaff, 1)
@@ -128,8 +131,8 @@ export class UIScene extends Phaser.Scene {
 
 	private createTowerStoreUI(): void {
 		const padding = 10
-		const cardWidth = 80 // Reduced from 100 to 80%
-		const cardHeight = 56 // Reduced from 80 to 80%
+		const cardWidth = 80
+		const cardHeight = 56
 		const cardSpacing = 6
 
 		// Create container for all tower cards
@@ -162,37 +165,23 @@ export class UIScene extends Phaser.Scene {
 	
 	private createEventStoreUI(): void {
 		const padding = 10
-		const cardWidth = 80
-		const cardHeight = 56
+		const cardWidth = 40
+		const cardHeight = 40
 		const cardSpacing = 6
 
-		// Create container for all event cards
 		this.eventStoreContainer = this.add.container(0, 0)
 		this.eventStoreContainer.setDepth(1000)
 
 		const events = this.eventStore.getAllEventTypes()
 
-		// Position cards horizontally from left to right at the bottom
-		const startY = this.scale.height - padding - cardHeight
-		const startX = padding
+		// Position cards at the top right corner
+		const startY = padding
+		const startX = this.scale.width - padding
 
 		events.forEach((event, index) => {
-			const x = startX + index * (cardWidth + cardSpacing)
+			const x = startX - (index + 1) * (cardWidth + cardSpacing)
 			this.createEventCard(event, x, startY, cardWidth, cardHeight)
 		})
-
-		// Add title above the cards
-		const titleX = startX
-		const titleY = startY - 8
-		const titleText = this.add.text(titleX, titleY, 'EVENTS', {
-			fontSize: '10px',
-			color: '#00aaff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
-		})
-		titleText.setOrigin(0, 1)
-		titleText.setDepth(1001)
-		this.eventStoreContainer.add(titleText)
 	}
 	
 	private createEventCard(event: Event, x: number, y: number, width: number, height: number): void {
@@ -205,51 +194,42 @@ export class UIScene extends Phaser.Scene {
 		bg.setName('bg')
 		cardContainer.add(bg)
 
-		// Event icon
-		const iconSprite = this.add.sprite(width / 2, 24, event.icon)
-		iconSprite.setScale(0.15)
-		iconSprite.setName('icon')
-		cardContainer.add(iconSprite)
+		// Event icon as background
+		if (event.icon === 'effect_freezing') {
+			const iconBg = this.add.image(0, 0, event.icon)
+			iconBg.setDisplaySize(width, height)
+			iconBg.setOrigin(0, 0)
+			iconBg.setAlpha(0.7)
+			cardContainer.add(iconBg)
+		} else {
+			// For other icons, use the standard approach
+			const iconSprite = this.add.sprite(width / 2, height / 2 - 5, event.icon)
+			iconSprite.setScale(0.15)
+			iconSprite.setName('icon')
+			cardContainer.add(iconSprite)
+		}
 		
 		// Active indicator (initially invisible)
 		const activeIndicator = this.add.graphics()
 		activeIndicator.fillStyle(0x00ff00, 0.3)
-		activeIndicator.fillCircle(width / 2, 24, 15)
+		activeIndicator.fillCircle(width / 2, height / 2, width / 4)
 		activeIndicator.setVisible(false)
 		activeIndicator.setName('active_indicator')
 		cardContainer.add(activeIndicator)
 
-		// Hotkey indicator above the event icon
-		const keyText = this.add.text(width / 2, 12, `[${event.key}]`, {
-			fontSize: '11px',
-			color: '#00d4ff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
-		})
-		keyText.setOrigin(0.5, 0)
-		cardContainer.add(keyText)
-
-		// Event name
-		const nameText = this.add.text(width / 2, 37, event.name, {
-			fontSize: '8px',
-			color: '#ffffff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
-		})
-		nameText.setOrigin(0.5, 0)
-		cardContainer.add(nameText)
-
-		// Cost with coin icon
-		const coinIcon = this.add.image(width / 2 - 10, 45, 'coin_icon')
-		coinIcon.setScale(0.8)
+		// Cost with coin icon at the top
+		const coinIcon = this.add.image(width / 2 - 8, 10, 'coin_icon')
+		coinIcon.setScale(0.6)
 		coinIcon.setOrigin(0.5)
 		coinIcon.setName('coin_icon')
 		
-		const costText = this.add.text(width / 2 + 5, 45, `${event.cost}`, {
-			fontSize: '8px',
+		const costText = this.add.text(width / 2 + 2, 10, `${event.cost}`, {
+			fontSize: '7px',
 			color: '#ffd700',
 			fontFamily: 'monospace',
-			fontStyle: 'bold'
+			fontStyle: 'bold',
+			stroke: '#000000',
+			strokeThickness: 1
 		})
 		costText.setOrigin(0, 0.5)
 		costText.setName('cost')
@@ -257,13 +237,27 @@ export class UIScene extends Phaser.Scene {
 		cardContainer.add(coinIcon)
 		cardContainer.add(costText)
 
-		// Duration
-		const durationText = this.add.text(width / 2, 55, `Duration: ${event.duration / 1000}s`, {
+		// Key indicator in the middle
+		const keyText = this.add.text(width / 2, height / 2, `${event.key}`, {
+			fontSize: '10px',
+			color: '#00d4ff',
+			fontFamily: 'monospace',
+			fontStyle: 'bold',
+			stroke: '#000000',
+			strokeThickness: 1
+		})
+		keyText.setOrigin(0.5, 0.5)
+		keyText.setName('key')
+		cardContainer.add(keyText)
+
+		const durationText = this.add.text(width / 2 + 2, height - 10, `${event.duration / 1000}s`, {
 			fontSize: '6px',
 			color: '#aaaaaa',
-			fontFamily: 'monospace'
+			fontFamily: 'monospace',
+			stroke: '#000000',
+			strokeThickness: 1
 		})
-		durationText.setOrigin(0.5, 0)
+		durationText.setOrigin(0, 0.5)
 		cardContainer.add(durationText)
 
 		cardContainer.setData('event', event)

@@ -68,7 +68,7 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('background', 'assets/background.jpeg')
 		this.load.image('floor_tile', 'assets/floor_tile.jpeg')
 		this.load.image('upgrade_arrow', 'assets/indicators/upgrade_arrow.png')
-		
+
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
 		

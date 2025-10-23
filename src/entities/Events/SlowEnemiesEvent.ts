@@ -12,7 +12,7 @@ export class SlowEnemiesEvent extends BaseEvent {
             'Slows down all enemies for 10 seconds',
             50, // cost
             10000, // duration in milliseconds (10 seconds)
-            'event_slow', // icon
+            'effect_freezing', // icon
             'S' // key
         );
         this.slowFactor = 0.5; // 50% slow
