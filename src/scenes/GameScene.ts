@@ -40,11 +40,18 @@ export class GameScene extends Phaser.Scene {
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
 
-	// Camera zoom properties
+	// Camera properties
 	private currentZoom = 1
 	private minZoom = 0.5
 	private maxZoom = 2
 	private zoomStep = 0.1
+	private cameraSpeed = 200
+	private arrowKeys: { [key: string]: boolean } = {
+		up: false,
+		down: false,
+		left: false,
+		right: false
+	}
 
 	constructor() {
 		super(GameScene.KEY)
@@ -139,6 +146,34 @@ export class GameScene extends Phaser.Scene {
 		// Add '-' key listener to zoom out
 		this.input.keyboard.on('keydown-MINUS', () => {
 			this.zoomOut()
+		})
+
+		// Add arrow key listeners for camera movement
+		this.input.keyboard.on('keydown-UP', () => {
+			this.arrowKeys.up = true
+		})
+		this.input.keyboard.on('keydown-DOWN', () => {
+			this.arrowKeys.down = true
+		})
+		this.input.keyboard.on('keydown-LEFT', () => {
+			this.arrowKeys.left = true
+		})
+		this.input.keyboard.on('keydown-RIGHT', () => {
+			this.arrowKeys.right = true
+		})
+
+		// Add key up listeners to stop camera movement
+		this.input.keyboard.on('keyup-UP', () => {
+			this.arrowKeys.up = false
+		})
+		this.input.keyboard.on('keyup-DOWN', () => {
+			this.arrowKeys.down = false
+		})
+		this.input.keyboard.on('keyup-LEFT', () => {
+			this.arrowKeys.left = false
+		})
+		this.input.keyboard.on('keyup-RIGHT', () => {
+			this.arrowKeys.right = false
 		})
 
 		// Add background image scaled to game size
@@ -330,6 +365,9 @@ export class GameScene extends Phaser.Scene {
 			this.lives -= livesLost;
 			this.emitLives();
 		}
+
+		// Handle camera movement with arrow keys
+		this.updateCameraMovement(delta);
 
         for (const tower of this.towers) {
 
@@ -777,6 +815,45 @@ export class GameScene extends Phaser.Scene {
 
 		// Apply zoom to the camera
 		this.cameras.main.setZoom(this.currentZoom)
+	}
+
+	/**
+	 * Update camera position based on arrow key input
+	 * @param delta Time since last update in milliseconds
+	 */
+	private updateCameraMovement(delta: number): void {
+		// Calculate the movement speed adjusted for delta time and zoom level
+		const adjustedSpeed = (this.cameraSpeed * delta) / 1000 / this.currentZoom;
+
+		// Track if any movement occurred
+		let moved = false;
+
+		// Calculate movement vector
+		let dx = 0;
+		let dy = 0;
+
+		if (this.arrowKeys.up) {
+			dy -= adjustedSpeed;
+			moved = true;
+		}
+		if (this.arrowKeys.down) {
+			dy += adjustedSpeed;
+			moved = true;
+		}
+		if (this.arrowKeys.left) {
+			dx -= adjustedSpeed;
+			moved = true;
+		}
+		if (this.arrowKeys.right) {
+			dx += adjustedSpeed;
+			moved = true;
+		}
+
+		// Apply movement if any keys are pressed
+		if (moved) {
+			this.cameras.main.scrollX += dx;
+			this.cameras.main.scrollY += dy;
+		}
 	}
 
 }
