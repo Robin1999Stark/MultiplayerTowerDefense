@@ -12,6 +12,7 @@ export class Tower {
     protected fireRateMs: number = 0
     protected damage: number = 0
     protected timeSinceShot = 0
+    protected hp: number = 100 // Default HP for towers
 
     protected level = 1
     protected baseScale = 0.08
@@ -29,6 +30,29 @@ export class Tower {
         }
 
         this.upgradeStats(levelUpdate);
+        
+        // Add HP text display for debugging
+        this.createHPDisplay();
+    }
+    
+    private hpText?: Phaser.GameObjects.Text;
+    
+    private createHPDisplay(): void {
+        // Create HP text display
+        this.hpText = this.scene.add.text(
+            this.sprite.x,
+            this.sprite.y + 20,
+            `HP: ${this.hp}`,
+            {
+                fontFamily: 'Arial',
+                fontSize: '10px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        this.hpText.setOrigin(0.5);
+        this.hpText.setDepth(3);
     }
 
     update(deltaMs: number, enemies: Enemy[]): void {
@@ -38,6 +62,11 @@ export class Tower {
         if (!target) return
         this.timeSinceShot = 0
         this.shoot(target)
+        
+        // Update HP text position
+        if (this.hpText) {
+            this.hpText.setPosition(this.sprite.x, this.sprite.y + 20);
+        }
     }
 
     private findTarget(enemies: Enemy[]): Enemy | undefined {
@@ -191,4 +220,77 @@ export class Tower {
 			this.sprite.clearTint()
 		})
 	}
-} 
+
+	/**
+	 * Reduces tower HP by the specified amount
+	 * @param amount Amount of damage to apply
+	 * @returns True if the tower was destroyed, false otherwise
+	 */
+	public takeDamage(amount: number): boolean {
+		this.hp -= amount;
+		
+		// Update HP display
+		if (this.hpText) {
+			this.hpText.setText(`HP: ${this.hp}`);
+			
+			// Change color based on HP percentage
+			const hpPercent = this.hp / 100; // Assuming 100 is max HP
+			if (hpPercent <= 0.25) {
+				this.hpText.setColor('#ff0000'); // Red for low HP
+			} else if (hpPercent <= 0.5) {
+				this.hpText.setColor('#ffff00'); // Yellow for medium HP
+			}
+		}
+		
+		// Visual feedback for damage
+		this.sprite.setTintFill(0xff0000); // Red tint
+		this.scene.time.delayedCall(100, () => {
+			this.sprite.clearTint();
+		});
+		
+		// Check if tower is destroyed
+		if (this.hp <= 0) {
+			this.playDestroyEffect();
+			if (this.hpText) {
+				this.hpText.destroy();
+			}
+			return true;
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Returns the current HP of the tower
+	 */
+	public getHP(): number {
+		return this.hp;
+	}
+	
+	/**
+	 * Visual effect when tower is destroyed
+	 */
+	private playDestroyEffect(): void {
+		// Create explosion effect
+		const particles = this.scene.add.particles(this.sprite.x, this.sprite.y, 'bullet', {
+			speed: { min: 100, max: 200 },
+			angle: { min: 0, max: 360 },
+			scale: { start: 1, end: 0 },
+			lifespan: 800,
+			blendMode: 'ADD',
+			quantity: 20
+		});
+		
+		// Fade out the tower
+		this.scene.tweens.add({
+			targets: this.sprite,
+			alpha: 0,
+			scale: this.sprite.scale * 0.5,
+			duration: 300,
+			ease: 'Power2',
+			onComplete: () => {
+				particles.destroy();
+			}
+		});
+	}
+}

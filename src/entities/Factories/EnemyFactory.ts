@@ -9,6 +9,7 @@ import { Imp } from '../Units/Imp';
 import { Skeleton } from '../Units/Skeleton';
 import { Unicorn } from '../Units/Unicorn';
 import { Zombie } from '../Units/Zombie';
+import { TowerAttacker } from '../Units/TowerAttacker';
 import { GAME_EVENTS } from '../../scenes/GameScene';
 
 export interface Enemy {
@@ -68,7 +69,8 @@ export class EnemyFactory {
     }
 
     private spawnRandomEnemy(wave: number): void {
-        const enemyTypes = [
+        // Base enemy types
+        const baseEnemyTypes = [
             OrcGrunt,
             Berserker,
             Chonkers,
@@ -79,8 +81,22 @@ export class EnemyFactory {
             Unicorn,
             Zombie
         ];
+        
+        let enemyPool = [...baseEnemyTypes];
+        
+        if (wave >= 3) {
+            const towerAttackerCount = Math.min(Math.floor(wave / 2), 5);
+            for (let i = 0; i < towerAttackerCount; i++) {
+                enemyPool.push(TowerAttacker);
+            }
+            
+            if (wave % 5 === 0) {
+                this.spawnEnemy(TowerAttacker, wave);
+                return;
+            }
+        }
 
-        const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        const randomType = enemyPool[Math.floor(Math.random() * enemyPool.length)];
         if (randomType) {
             this.spawnEnemy(randomType, wave);
         }

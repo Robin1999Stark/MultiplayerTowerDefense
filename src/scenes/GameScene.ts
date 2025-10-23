@@ -57,6 +57,7 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('skeleton', 'assets/units/skeleton.png')
 		this.load.image('unicorn', 'assets/units/unicorn.png')
 		this.load.image('zombie', 'assets/units/zombie.png')
+		this.load.image('tower_attacker', 'assets/units/tower_attacker.png')
 		this.load.image('castle', 'assets/castle.png')
 		this.load.image('tower_basic', 'assets/towers/tower_basic.png')
 		this.load.image('tower_laser', 'assets/towers/tower_laser.png')
@@ -71,6 +72,28 @@ export class GameScene extends Phaser.Scene {
 
 		// Generate simple textures for sprites (no external assets)
 		const g = this.add.graphics()
+
+		// TowerAttacker texture (green circle with radiation symbol)
+		g.clear()
+		g.fillStyle(0x00ff00, 1) // Green fill
+		g.fillCircle(16, 16, 16)
+		// Add radiation symbol
+		g.lineStyle(2, 0x000000, 1)
+		g.beginPath()
+		g.arc(16, 16, 8, 0, Math.PI * 2)
+		g.closePath()
+		g.strokePath()
+		// Add three radiation "blades"
+		for (let i = 0; i < 3; i++) {
+			const angle = (i * Math.PI * 2) / 3
+			g.save()
+			g.translateCanvas(16, 16)
+			g.rotateCanvas(angle)
+			g.fillStyle(0x000000, 1)
+			g.fillTriangle(0, 0, -4, -12, 4, -12)
+			g.restore()
+		}
+		g.generateTexture('tower_attacker', 32, 32)
 
 		// OrcGrunt texture
 		g.clear()
@@ -284,9 +307,18 @@ export class GameScene extends Phaser.Scene {
 			this.emitLives();
 		}
 
-		// Update towers shooting
-		for (const tower of this.towers) {
+		// Update towers shooting and check for destroyed towers
+		for (let i = this.towers.length - 1; i >= 0; i--) {
+			const tower = this.towers[i];
+            if (!tower) {
+                continue;
+            }
 			tower.update(delta, this.waveFactory.getEnemies());
+			
+			// Check if tower has been destroyed (HP <= 0)
+			if (tower.getHP() <= 0) {
+				this.removeTower(tower);
+			}
 		}
 		
 		// Update active events
@@ -458,6 +490,49 @@ export class GameScene extends Phaser.Scene {
 		if (arrow) arrow.off('pointerdown')
 		container.destroy()
 		this.upgradeIndicators.delete(tower)
+	}
+	
+	/**
+	 * Removes a tower from the game
+	 * @param tower The tower to remove
+	 */
+	private removeTower(tower: Tower): void {
+		// Remove upgrade indicator if it exists
+		this.removeUpgradeIndicator(tower);
+		
+		// Remove from towers array
+		const index = this.towers.indexOf(tower);
+		if (index !== -1) {
+			this.towers.splice(index, 1);
+		}
+		
+		// Show destruction message
+		const text = this.add.text(
+			tower.sprite.x,
+			tower.sprite.y - 30,
+			"Tower Destroyed!",
+			{
+				fontFamily: 'Arial',
+				fontSize: '14px',
+				color: '#ff0000',
+				stroke: '#000000',
+				strokeThickness: 2
+			}
+		);
+		text.setOrigin(0.5);
+		text.setDepth(100);
+		
+		// Fade out and remove the message
+		this.tweens.add({
+			targets: text,
+			alpha: 0,
+			y: text.y - 20,
+			duration: 1500,
+			ease: 'Power2',
+			onComplete: () => {
+				text.destroy();
+			}
+		});
 	}
 
 	private updateUpgradeIndicators(): void {
