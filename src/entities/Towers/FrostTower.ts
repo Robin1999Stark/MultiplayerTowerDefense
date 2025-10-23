@@ -69,10 +69,10 @@ export class FrostTower extends Tower {
 	}
 
     protected override upgradeStats(upgrade: TowerLevelUpgrade): void {
-
         this.range = upgrade.range;
         this.fireRateMs = upgrade.fireRateMs;
         this.damage = upgrade.damage;
+        this.hp = upgrade.hp;
         this.sprite.setScale(upgrade.baseScale);
         this.slowDownMs = upgrade?.slowDownMs ?? 5000
     }

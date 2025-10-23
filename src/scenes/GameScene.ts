@@ -307,38 +307,23 @@ export class GameScene extends Phaser.Scene {
 			this.emitLives();
 		}
 
-		// Update towers shooting and check for destroyed towers
-		for (let i = this.towers.length - 1; i >= 0; i--) {
-			const tower = this.towers[i];
-            if (!tower) {
-                continue;
-            }
-			tower.update(delta, this.waveFactory.getEnemies());
-			
-			// Check if tower has been destroyed (HP <= 0)
-			if (tower.getHP() <= 0) {
-				this.removeTower(tower);
-			}
-		}
-		
-		// Update active events
-		for (let i = this.activeEvents.length - 1; i >= 0; i--) {
-			const event = this.activeEvents[i];
+        for (const tower of this.towers) {
 
-            if (!event) {
-                continue;
-            }
+            tower.update(delta, this.waveFactory.getEnemies());
 
-			event.update(delta, this);
-			
-			// Remove event if it's no longer active
-			if (!event.isActive()) {
-				this.activeEvents.splice(i, 1);
-				
-				// Notify UI that event has ended
-				this.game.events.emit(GAME_EVENTS.eventActivated, null);
-			}
-		}
+            if (tower.getHP() <= 0) {
+                this.removeTower(tower);
+            }
+        }
+
+        for (const event of this.activeEvents) {
+            event.update(delta, this);
+
+            if (!event.isActive()) {
+                this.activeEvents = this.activeEvents.filter((e) => e !== event);
+                this.game.events.emit(GAME_EVENTS.eventActivated, null);
+            }
+        }
 
 		// Sort towers by Y position for proper depth ordering
 		this.sortTowersByDepth();
