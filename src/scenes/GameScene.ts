@@ -150,19 +150,32 @@ export class GameScene extends Phaser.Scene {
 				this.zoomOut()
 			})
 
-			// Add arrow key listeners for camera movement
-			this.input.keyboard.on('keydown-UP', () => {
-				this.arrowKeys.up = true
-			})
-			this.input.keyboard.on('keydown-DOWN', () => {
-				this.arrowKeys.down = true
-			})
-			this.input.keyboard.on('keydown-LEFT', () => {
-				this.arrowKeys.left = true
-			})
-			this.input.keyboard.on('keydown-RIGHT', () => {
-				this.arrowKeys.right = true
-			})
+		// Add ',' key listener to play previous music track
+		this.input.keyboard.on('keydown-COMMA', () => {
+			this.audioManager.playPreviousTrack()
+		})
+
+		// Add '.' key listener to play next music track
+		this.input.keyboard.on('keydown-PERIOD', () => {
+			this.audioManager.playNextTrack()
+		})
+
+		// Start playing background music
+		this.audioManager.startMusic()
+
+		// Add arrow key listeners for camera movement
+		this.input.keyboard.on('keydown-UP', () => {
+			this.arrowKeys.up = true
+		})
+		this.input.keyboard.on('keydown-DOWN', () => {
+			this.arrowKeys.down = true
+		})
+		this.input.keyboard.on('keydown-LEFT', () => {
+			this.arrowKeys.left = true
+		})
+		this.input.keyboard.on('keydown-RIGHT', () => {
+			this.arrowKeys.right = true
+		})
 
 			// Add key up listeners to stop camera movement
 			this.input.keyboard.on('keyup-UP', () => {
@@ -215,7 +228,7 @@ export class GameScene extends Phaser.Scene {
 		const tileH = 32
 		const tileScaleX = src ? tileW / (src as HTMLImageElement | HTMLCanvasElement).width : 1
 		const tileScaleY = src ? tileH / (src as HTMLImageElement | HTMLCanvasElement).height : 1
-		
+
 		// First, draw corner tiles at waypoints to fill gaps
 		for (let i = 1; i < this.pathPoints.length - 1; i++) {
 			const waypoint = this.pathPoints[i]!
@@ -224,7 +237,7 @@ export class GameScene extends Phaser.Scene {
 			cornerTile.setOrigin(0.5, 0.5)
 			cornerTile.tileScaleX = tileScaleX
 			cornerTile.tileScaleY = tileScaleY
-			
+
 			// Create a soft edge mask for corner tiles
 			const cornerMaskGfx = this.add.graphics()
 			cornerMaskGfx.setDepth(-1)
@@ -245,7 +258,7 @@ export class GameScene extends Phaser.Scene {
 			cornerTile.setMask(cornerMask)
 			cornerMaskGfx.setVisible(false)
 		}
-		
+
 		// Then draw the line segments between waypoints
 		for (let i = 0; i < this.pathPoints.length - 1; i++) {
 			const a = this.pathPoints[i]!
