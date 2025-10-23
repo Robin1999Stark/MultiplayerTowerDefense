@@ -19,7 +19,7 @@ export class StartScene extends Phaser.Scene {
 
 		// Background
 		this.cameras.main.setBackgroundColor('#0b1020')
-		
+
 		// Add 'M' key listener to toggle mute
 		this.input.keyboard?.on('keydown-M', () => {
 			this.audioManager.toggleMute()
@@ -90,7 +90,7 @@ export class StartScene extends Phaser.Scene {
 			})
 			text.setOrigin(0.5)
 			text.setAlpha(0)
-			
+
 			// Fade in animation
 			this.tweens.add({
 				targets: text,
@@ -212,9 +212,9 @@ export class StartScene extends Phaser.Scene {
 			const x = Phaser.Math.Between(0, this.scale.width)
 			const y = Phaser.Math.Between(0, this.scale.height)
 			const size = Phaser.Math.Between(1, 3)
-			
+
 			const particle = this.add.circle(x, y, size, 0x00d4ff, 0.3)
-			
+
 			// Floating animation
 			this.tweens.add({
 				targets: particle,
@@ -241,11 +241,11 @@ export class StartScene extends Phaser.Scene {
 
 		// Fade out effect
 		this.cameras.main.fadeOut(500, 0, 0, 0)
-		
+
 		this.cameras.main.once('camerafadeoutcomplete', () => {
-			// Stop music
+			// Stop the StartScene music
 			this.stopMusic()
-			
+
 			// Stop this scene and start the game scenes
 			this.scene.stop()
 			this.scene.launch('GameScene')
@@ -257,7 +257,7 @@ export class StartScene extends Phaser.Scene {
 	private playStartSound(): void {
 		// Don't play sound if muted
 		if (this.audioManager.isMuted()) return
-		
+
 		const ctx = this.audioContext || this.getAudioContext()
 		if (!ctx) return
 
@@ -270,11 +270,11 @@ export class StartScene extends Phaser.Scene {
 		osc1.type = 'square'
 		osc1.frequency.setValueAtTime(400, startTime)
 		osc1.frequency.exponentialRampToValueAtTime(1200, startTime + duration)
-		
+
 		const gain1 = ctx.createGain()
 		gain1.gain.setValueAtTime(0.15, startTime)
 		gain1.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
-		
+
 		osc1.connect(gain1)
 		gain1.connect(ctx.destination)
 		osc1.start(startTime)
@@ -285,11 +285,11 @@ export class StartScene extends Phaser.Scene {
 		osc2.type = 'triangle'
 		osc2.frequency.setValueAtTime(500, startTime + 0.05)
 		osc2.frequency.exponentialRampToValueAtTime(1400, startTime + duration)
-		
+
 		const gain2 = ctx.createGain()
 		gain2.gain.setValueAtTime(0.1, startTime + 0.05)
 		gain2.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
-		
+
 		osc2.connect(gain2)
 		gain2.connect(ctx.destination)
 		osc2.start(startTime + 0.05)
@@ -300,11 +300,11 @@ export class StartScene extends Phaser.Scene {
 		pop.type = 'sine'
 		pop.frequency.setValueAtTime(800, startTime + duration)
 		pop.frequency.exponentialRampToValueAtTime(200, startTime + duration + 0.1)
-		
+
 		const popGain = ctx.createGain()
 		popGain.gain.setValueAtTime(0.12, startTime + duration)
 		popGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration + 0.1)
-		
+
 		pop.connect(popGain)
 		popGain.connect(ctx.destination)
 		pop.start(startTime + duration)
@@ -340,20 +340,20 @@ export class StartScene extends Phaser.Scene {
 		if (ctx.state === 'suspended') {
 			ctx.resume()
 		}
-		
+
 		this.audioContext = ctx
-		
+
 		// Don't create duplicate music if already playing
 		if (this.musicGain) {
 			return
 		}
-		
+
 		this.musicGain = ctx.createGain()
 		// Set initial gain based on mute state
 		const initialGain = this.audioManager.isMuted() ? 0 : 0.3
 		this.musicGain.gain.setValueAtTime(initialGain, ctx.currentTime)
 		this.musicGain.connect(ctx.destination)
-		
+
 		console.log('Starting music, audio context state:', ctx.state)
 
 		// Silly bouncy chord progression in C major (happy key!)
@@ -380,16 +380,16 @@ export class StartScene extends Phaser.Scene {
 				const bass = ctx.createOscillator()
 				bass.type = 'square' // Square wave for retro video game sound
 				bass.frequency.setValueAtTime(chord[0]! / 2, chordStartTime)
-				
+
 				const bassGain = ctx.createGain()
 				bassGain.gain.setValueAtTime(0.12, chordStartTime)
 				bassGain.gain.exponentialRampToValueAtTime(0.001, chordStartTime + 0.15)
-				
+
 				bass.connect(bassGain)
 				bassGain.connect(this.musicGain!)
 				bass.start(chordStartTime)
 				bass.stop(chordStartTime + 0.2)
-				
+
 				this.musicNodes.push(bass, bassGain)
 
 				// Chord stabs (short and punchy like video game bleeps)
@@ -397,16 +397,16 @@ export class StartScene extends Phaser.Scene {
 					const osc = ctx.createOscillator()
 					osc.type = 'square'
 					osc.frequency.setValueAtTime(freq, chordStartTime)
-					
+
 					const gain = ctx.createGain()
 					gain.gain.setValueAtTime(0.03, chordStartTime)
 					gain.gain.exponentialRampToValueAtTime(0.001, chordStartTime + 0.1)
-					
+
 					osc.connect(gain)
 					gain.connect(this.musicGain!)
 					osc.start(chordStartTime)
 					osc.stop(chordStartTime + 0.12)
-					
+
 					this.musicNodes.push(osc, gain)
 				})
 			})
@@ -435,18 +435,18 @@ export class StartScene extends Phaser.Scene {
 				const osc = ctx.createOscillator()
 				osc.type = 'triangle' // Softer for melody
 				osc.frequency.setValueAtTime(note.freq, noteStartTime)
-				
+
 				const gain = ctx.createGain()
 				gain.gain.setValueAtTime(0, noteStartTime)
 				gain.gain.linearRampToValueAtTime(0.1, noteStartTime + 0.01)
 				gain.gain.setValueAtTime(0.1, noteStartTime + note.duration - 0.05)
 				gain.gain.linearRampToValueAtTime(0, noteStartTime + note.duration)
-				
+
 				osc.connect(gain)
 				gain.connect(this.musicGain!)
 				osc.start(noteStartTime)
 				osc.stop(noteStartTime + note.duration)
-				
+
 				this.musicNodes.push(osc, gain)
 			})
 
@@ -458,16 +458,16 @@ export class StartScene extends Phaser.Scene {
 				boing.type = 'sine'
 				boing.frequency.setValueAtTime(800, boingStart)
 				boing.frequency.exponentialRampToValueAtTime(200, boingStart + 0.15)
-				
+
 				const boingGain = ctx.createGain()
 				boingGain.gain.setValueAtTime(0.08, boingStart)
 				boingGain.gain.exponentialRampToValueAtTime(0.001, boingStart + 0.15)
-				
+
 				boing.connect(boingGain)
 				boingGain.connect(this.musicGain!)
 				boing.start(boingStart)
 				boing.stop(boingStart + 0.2)
-				
+
 				this.musicNodes.push(boing, boingGain)
 			})
 
@@ -478,7 +478,7 @@ export class StartScene extends Phaser.Scene {
 		// Start the music immediately (from the beginning!)
 		this.musicGain.gain.setValueAtTime(0, ctx.currentTime)
 		this.musicGain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.5)
-		
+
 		playLoop()
 	}
 
@@ -494,7 +494,7 @@ export class StartScene extends Phaser.Scene {
 			}
 		})
 		this.musicNodes = []
-		
+
 		if (this.musicGain) {
 			try {
 				this.musicGain.disconnect()
@@ -504,4 +504,3 @@ export class StartScene extends Phaser.Scene {
 		}
 	}
 }
-
