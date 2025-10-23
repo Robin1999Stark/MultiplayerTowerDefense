@@ -46,11 +46,12 @@ export class Tower {
             this.sprite.y + 20,
             this.buildHpText(),
             {
-                fontFamily: 'Arial',
-                fontSize: '10px',
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '14px',
                 color: '#ffffff',
                 stroke: '#000000',
-                strokeThickness: 2
+                strokeThickness: 3,
+                resolution: 2
             }
         );
         this.hpText.setOrigin(0.5);
@@ -287,11 +288,13 @@ export class Tower {
 
             const hpPercent = this.hp / 100;
             if (hpPercent <= 0.25) {
-                this.hpText.setColor('#ff0000');
+                this.hpText.setColor('#ff3333'); // Bright red for critical
             } else if (hpPercent <= 0.5) {
-                this.hpText.setColor('#ffff00');
+                this.hpText.setColor('#ffaa00'); // Orange for warning
+            } else if (hpPercent <= 0.75) {
+                this.hpText.setColor('#ffff00'); // Yellow for medium
             } else {
-                this.hpText.setColor('#ffffff');
+                this.hpText.setColor('#00ff00'); // Green for healthy
             }
         }
     }

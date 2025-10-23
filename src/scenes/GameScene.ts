@@ -481,12 +481,13 @@ export class GameScene extends Phaser.Scene {
 			this.scale.height / 4,
 			`${event.name} Activated!`,
 			{
-				fontFamily: 'Arial',
-				fontSize: '24px',
-				color: '#ffffff',
+				fontFamily: 'Arial, sans-serif',
+				fontSize: '32px',
+				color: '#00ff00',
 				stroke: '#000000',
-				strokeThickness: 4,
-				shadow: { color: '#000000', blur: 10, stroke: true, fill: true }
+				strokeThickness: 5,
+				shadow: { color: '#000000', blur: 10, stroke: true, fill: true },
+				resolution: 2
 			}
 		)
 		text.setOrigin(0.5)
@@ -533,11 +534,12 @@ export class GameScene extends Phaser.Scene {
 
 
 		const priceText = this.add.text(0, 0, `${this.buildLevelText(tower)}: ${cost}`, {
-			fontFamily: 'Arial',
-			fontSize: '8px',
-			color: '#ffffff',
+			fontFamily: 'Arial, sans-serif',
+			fontSize: '12px',
+			color: '#ffff00',
 			stroke: '#000000',
-			strokeThickness: 2,
+			strokeThickness: 3,
+			resolution: 2
 		}).setOrigin(0, 0.5);
 
 		const margin = 2;
@@ -591,11 +593,12 @@ export class GameScene extends Phaser.Scene {
 			tower.sprite.y - 30,
 			"Tower Destroyed!",
 			{
-				fontFamily: 'Arial',
-				fontSize: '14px',
-				color: '#ff0000',
+				fontFamily: 'Arial, sans-serif',
+				fontSize: '18px',
+				color: '#ff3333',
 				stroke: '#000000',
-				strokeThickness: 2
+				strokeThickness: 3,
+				resolution: 2
 			}
 		);
 		text.setOrigin(0.5);
@@ -644,10 +647,10 @@ export class GameScene extends Phaser.Scene {
 			if (arrow) {
 				if (this.gold >= cost) {
 					arrow.clearTint()
-					if (priceText) priceText.setStyle({ color: '#ffffff' })
+					if (priceText) priceText.setStyle({ color: '#00ff00' })
 				} else {
-					arrow.setTint(0xff9999)
-					if (priceText) priceText.setStyle({ color: '#ffcccc' })
+					arrow.setTint(0xff4444)
+					if (priceText) priceText.setStyle({ color: '#ff6666' })
 				}
 			}
 		}
@@ -784,7 +787,15 @@ export class GameScene extends Phaser.Scene {
 		this.game.events.emit(GAME_EVENTS.livesChanged, this.lives)
 		if (this.lives <= 0) {
 			this.scene.pause()
-			this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { fontSize: '32px', color: '#fff' }).setOrigin(0.5)
+			this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { 
+				fontSize: '48px', 
+				color: '#ff0000',
+				fontFamily: 'Arial, sans-serif',
+				fontStyle: 'bold',
+				stroke: '#000000',
+				strokeThickness: 6,
+				resolution: 2
+			}).setOrigin(0.5)
 		}
 	}
 

@@ -56,9 +56,10 @@ export class StatisticsScene extends Scene {
 
         const textStyle = { 
             color: '#ffffff',
-            fontSize: '16px',
-            fontFamily: 'monospace',
-            fontStyle: 'bold'
+            fontSize: '20px',
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold',
+            resolution: 2
         };
 
         // Gold statistic (with icon)

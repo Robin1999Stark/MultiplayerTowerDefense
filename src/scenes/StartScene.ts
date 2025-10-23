@@ -49,25 +49,27 @@ export class StartScene extends Phaser.Scene {
 
 		// Game title
 		const title = this.add.text(centerX, centerY - 140, 'TOWER DEFENSE', {
-			fontSize: '56px',
+			fontSize: '72px',
 			color: '#00d4ff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
 		})
 		title.setOrigin(0.5)
-		title.setStroke('#001a33', 4)
+		title.setStroke('#001a33', 6)
 
 		// Subtitle
 		const subtitle = this.add.text(centerX, centerY - 90, 'Multiplayer coming soonish :) ', {
-			fontSize: '18px',
+			fontSize: '24px',
 			color: '#88ccff',
-			fontFamily: 'monospace',
-			fontStyle: 'italic'
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'italic',
+			resolution: 2
 		})
 		subtitle.setOrigin(0.5)
 
 		// Instructions container
-		const instructionsY = centerY - 30
+		const instructionsY = centerY - 50
 		const instructions = [
 			'HOW TO PLAY:',
 			'',
@@ -82,11 +84,12 @@ export class StartScene extends Phaser.Scene {
 
 		instructions.forEach((line, index) => {
 			const isHeader = index === 0
-			const text = this.add.text(centerX, instructionsY + index * 18, line, {
-				fontSize: isHeader ? '14px' : '12px',
+			const text = this.add.text(centerX, instructionsY + index * 24, line, {
+				fontSize: isHeader ? '20px' : '16px',
 				color: isHeader ? '#ffd700' : '#cccccc',
-				fontFamily: 'monospace',
-				fontStyle: isHeader ? 'bold' : 'normal'
+				fontFamily: 'Arial, sans-serif',
+				fontStyle: isHeader ? 'bold' : 'normal',
+				resolution: 2
 			})
 			text.setOrigin(0.5)
 			text.setAlpha(0)
@@ -101,7 +104,7 @@ export class StartScene extends Phaser.Scene {
 		})
 
 		// Start button
-		const buttonY = centerY + 160
+		const buttonY = centerY + 200
 		const buttonWidth = 200
 		const buttonHeight = 50
 
@@ -112,10 +115,11 @@ export class StartScene extends Phaser.Scene {
 
 		// Button text
 		const buttonText = this.add.text(centerX, buttonY, 'START GAME', {
-			fontSize: '20px',
+			fontSize: '24px',
 			color: '#00d4ff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
 		})
 		buttonText.setOrigin(0.5)
 
@@ -157,9 +161,10 @@ export class StartScene extends Phaser.Scene {
 
 		// Pulsing "Press SPACE" hint
 		const spaceHint = this.add.text(centerX, buttonY + 50, 'Press SPACE or ENTER to start', {
-			fontSize: '12px',
+			fontSize: '16px',
 			color: '#666666',
-			fontFamily: 'monospace'
+			fontFamily: 'Arial, sans-serif',
+			resolution: 2
 		})
 		spaceHint.setOrigin(0.5)
 		this.tweens.add({

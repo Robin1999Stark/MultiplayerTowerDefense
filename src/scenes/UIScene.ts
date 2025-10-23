@@ -170,9 +170,10 @@ export class UIScene extends Phaser.Scene {
 		const escX = startX
 		const escY = startY - 8
 		const escText = this.add.text(escX, escY, 'ESC to cancel', {
-			fontSize: '9px',
+			fontSize: '14px',
 			color: '#888888',
-			fontFamily: 'monospace'
+			fontFamily: 'Arial, sans-serif',
+			resolution: 2
 		})
 		escText.setOrigin(1, 1)
 		escText.setDepth(1001)
@@ -229,12 +230,13 @@ export class UIScene extends Phaser.Scene {
 		coinIcon.setName('coin_icon')
 		
 		const costText = this.add.text(width / 2 + 2, 10, `${event.cost}`, {
-			fontSize: '7px',
+			fontSize: '11px',
 			color: '#ffd700',
-			fontFamily: 'monospace',
+			fontFamily: 'Arial, sans-serif',
 			fontStyle: 'bold',
 			stroke: '#000000',
-			strokeThickness: 1
+			strokeThickness: 1,
+			resolution: 2
 		})
 		costText.setOrigin(0, 0.5)
 		costText.setName('cost')
@@ -243,23 +245,25 @@ export class UIScene extends Phaser.Scene {
 		cardContainer.add(costText)
 
 		const keyText = this.add.text(width / 2, height / 2, `[${event.key}]`, {
-			fontSize: '10px',
+			fontSize: '14px',
 			color: '#00d4ff',
-			fontFamily: 'monospace',
+			fontFamily: 'Arial, sans-serif',
 			fontStyle: 'bold',
 			stroke: '#000000',
-			strokeThickness: 1
+			strokeThickness: 1,
+			resolution: 2
 		})
 		keyText.setOrigin(0.5, 0.5)
 		keyText.setName('key')
 		cardContainer.add(keyText)
 
 		const durationText = this.add.text(width / 2 + 2, height - 10, `${event.duration / 1000}s`, {
-			fontSize: '6px',
+			fontSize: '10px',
 			color: '#aaaaaa',
-			fontFamily: 'monospace',
+			fontFamily: 'Arial, sans-serif',
 			stroke: '#000000',
-			strokeThickness: 1
+			strokeThickness: 1,
+			resolution: 2
 		})
 		durationText.setOrigin(0, 0.5)
 		cardContainer.add(durationText)
@@ -314,48 +318,58 @@ export class UIScene extends Phaser.Scene {
 				textureKey = 'tower_basic'
 				scale = 0.15
 		}
-		const towerSprite = this.add.sprite(-width / 2, 24, textureKey)
+		const towerSprite = this.add.sprite(-width / 2, 28, textureKey)
 		towerSprite.setScale(scale)
+		towerSprite.setDepth(0)
 		cardContainer.add(towerSprite)
 
-		// Hotkey indicator above the tower sprite
-		const keyText = this.add.text(-width / 2, 12, `[${towerType.key}]`, {
-			fontSize: '11px',
+		// Hotkey indicator
+		const keyText = this.add.text(-width / 2, 15, `[${towerType.key}]`, {
+			fontSize: '14px',
 			color: '#00d4ff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
 		})
 		keyText.setOrigin(0.5, 0)
+		keyText.setDepth(1)
 		cardContainer.add(keyText)
 
-		// Tower name (shorter version)
-		const shortName = towerType.name.replace(' Tower', '')
-		const nameText = this.add.text(-width / 2, 37, shortName, {
-			fontSize: '8px',
-			color: '#ffffff',
-			fontFamily: 'monospace',
-			fontStyle: 'bold'
-		})
-		nameText.setOrigin(0.5, 0)
-		cardContainer.add(nameText)
-
-		// Cost
+		// Cost at the very top (added last so it renders on top)
 		const level1 = towerType.levels.get(1)
-		const costText = this.add.text(-width / 2, 42, `${level1?.cost}g`, {
-			fontSize: '7px',
+		const costText = this.add.text(-width / 2, 2, `${level1?.cost}g`, {
+			fontSize: '13px',
 			color: '#ffd700',
-			fontFamily: 'monospace'
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
 		})
 		costText.setOrigin(0.5, 0)
+		costText.setDepth(2)
 		costText.setName('cost')
 		cardContainer.add(costText)
 
+		// Tower name (shorter version)
+		const shortName = towerType.name.replace(' Tower', '')
+		const nameText = this.add.text(-width / 2, 41, shortName, {
+			fontSize: '12px',
+			color: '#ffffff',
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
+		})
+		nameText.setOrigin(0.5, 0)
+		nameText.setDepth(1)
+		cardContainer.add(nameText)
+
 		const statsText = this.add.text(-width / 2, 55, `R:${Math.round((level1?.range || 0) / 100)} D:${level1?.damage} F:${Math.round(1000 / (level1?.fireRateMs || 1))}/s`, {
-			fontSize: '6px',
+			fontSize: '10px',
 			color: '#aaaaaa',
-			fontFamily: 'monospace'
+			fontFamily: 'Arial, sans-serif',
+			resolution: 2
 		})
 		statsText.setOrigin(0.5, 0)
+		statsText.setDepth(1)
 		cardContainer.add(statsText)
 
 		cardContainer.setData('towerType', towerType)
