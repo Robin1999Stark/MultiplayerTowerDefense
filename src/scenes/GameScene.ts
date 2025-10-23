@@ -40,6 +40,12 @@ export class GameScene extends Phaser.Scene {
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
 
+	// Camera zoom properties
+	private currentZoom = 1
+	private minZoom = 0.5
+	private maxZoom = 2
+	private zoomStep = 0.1
+
 	constructor() {
 		super(GameScene.KEY)
 		this.towerStore = TowerStore.getInstance()
@@ -125,6 +131,16 @@ export class GameScene extends Phaser.Scene {
 			this.audioManager.toggleMute()
 		})
 
+		// Add '+' key listener to zoom in
+		this.input.keyboard.on('keydown-PLUS', () => {
+			this.zoomIn()
+		})
+
+		// Add '-' key listener to zoom out
+		this.input.keyboard.on('keydown-MINUS', () => {
+			this.zoomOut()
+		})
+
 		// Add background image scaled to game size
 		const bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background')
 		bg.setDepth(-10)
@@ -140,10 +156,10 @@ export class GameScene extends Phaser.Scene {
 
 		// Generate a randomized path across the map
 		this.pathPoints = PathGenerator.generateRandomPath(this.scale.width, this.scale.height)
-		
+
 		// Initialize wave factory
 		this.waveFactory = new WaveFactory(this, this.pathPoints)
-		
+
 		// Set up wave completion callback
 		this.waveFactory.onWaveComplete(() => {
 			// Delay then start next wave
@@ -302,13 +318,13 @@ export class GameScene extends Phaser.Scene {
 	override update(time: number, delta: number): void {
 		// Update enemies and get results
 		const { goldEarned, livesLost } = this.waveFactory.update(delta);
-		
+
 		// Update gold if enemies were killed
 		if (goldEarned > 0) {
 			this.gold += goldEarned;
 			this.emitGold();
 		}
-		
+
 		// Update lives if enemies reached the end
 		if (livesLost > 0) {
 			this.lives -= livesLost;
@@ -741,4 +757,26 @@ export class GameScene extends Phaser.Scene {
 		return Math.hypot(p.x - cx, p.y - cy)
 	}
 
-} 
+	/**
+	 * Zoom in the camera by one step
+	 */
+	private zoomIn(): void {
+		// Increase zoom level by one step
+		this.currentZoom = Math.min(this.currentZoom + this.zoomStep, this.maxZoom)
+
+		// Apply zoom to the camera
+		this.cameras.main.setZoom(this.currentZoom)
+	}
+
+	/**
+	 * Zoom out the camera by one step
+	 */
+	private zoomOut(): void {
+		// Decrease zoom level by one step
+		this.currentZoom = Math.max(this.currentZoom - this.zoomStep, this.minZoom)
+
+		// Apply zoom to the camera
+		this.cameras.main.setZoom(this.currentZoom)
+	}
+
+}
