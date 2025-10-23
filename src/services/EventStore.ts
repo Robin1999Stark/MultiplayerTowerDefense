@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { Event } from '../entities/Events/Event'
 import { EventTypeID } from '../entities/Events/EventFactory'
 import { SlowEnemiesEvent } from '../entities/Events/SlowEnemiesEvent'
+import { AreaDamageEvent } from '../entities/Events/AreaDamageEvent'
 
 export class EventStore {
     private static instance: EventStore
@@ -20,6 +21,7 @@ export class EventStore {
 
     private registerEvents(): void {
         this.eventTypes.set(EventTypeID.SLOW_ENEMIES, () => new SlowEnemiesEvent())
+        this.eventTypes.set(EventTypeID.AREA_DAMAGE, () => new AreaDamageEvent())
     }
 
     public createEvent(eventTypeId: EventTypeID): Event | undefined {

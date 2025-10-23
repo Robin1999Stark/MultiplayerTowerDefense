@@ -3,6 +3,7 @@ import { SlowEnemiesEvent } from './SlowEnemiesEvent';
 
 export enum EventTypeID {
     SLOW_ENEMIES = 'slow_enemies',
+    AREA_DAMAGE = 'area_damage',
 }
 
 export class EventFactory {

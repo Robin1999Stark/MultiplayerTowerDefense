@@ -16,6 +16,7 @@ export interface TowerLevelUpgrade {
     cost: number
     baseScale?: number
     slowDownMs?: number
+    slowFactor?: number
 }
 
 export interface TowerType {
@@ -51,11 +52,11 @@ export class TowerStore {
                 color: 0x00aaff,
                 description: 'Slows enemies for 10 seconds',
                 levels: new Map([
-                    [1, { range: 200, fireRateMs: 3000, damage: 0, slowDownMs: 5000, cost: 100 }],
-                    [2, { range: 240, fireRateMs: 2600, damage: 10, slowDownMs: 6000, cost: 120 }],
-                    [3, { range: 260, fireRateMs: 2100, damage: 20, slowDownMs: 7000, cost: 160 }],
-                    [4, { range: 290, fireRateMs: 1300, damage: 30, slowDownMs: 8000, cost: 220 }],
-                    [5, { range: 360, fireRateMs: 800, damage: 40, slowDownMs: 10000, cost: 240 }]
+                    [1, { range: 200, fireRateMs: 3000, damage: 0, slowDownMs: 5000, slowFactor: 0.8, cost: 100 }],
+                    [2, { range: 240, fireRateMs: 2600, damage: 10, slowDownMs: 6000, slowFactor: 0.7, cost: 120 }],
+                    [3, { range: 260, fireRateMs: 2100, damage: 20, slowDownMs: 7000, slowFactor: 0.6, cost: 160 }],
+                    [4, { range: 290, fireRateMs: 1300, damage: 30, slowDownMs: 8000, slowFactor: 0.5, cost: 220 }],
+                    [5, { range: 360, fireRateMs: 800, damage: 40, slowDownMs: 10000, slowFactor: 0.4, cost: 240 }]
                 ]),
             },
             {

@@ -6,12 +6,14 @@ import { Enemy } from '../Factories/EnemyFactory'
 export class FrostTower extends Tower {
 
     protected slowDownMs: number = 0
+    protected slowFactor: number = 0
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		super(scene, x, y, type)
 		this.sprite.setTexture('tower_frost')
 		this.sprite.setScale(0.1)
         this.slowDownMs = this.getCurrentStats()?.slowDownMs ?? 5000;
+        this.slowFactor = this.getCurrentStats()?.slowFactor ?? 0.5;
 	}
 
 	protected override shoot(target: Enemy): void {
@@ -38,7 +40,7 @@ export class FrostTower extends Tower {
 			duration,
 			onComplete: () => {
 				bullet.destroy();
-                target.applySlow && target.applySlow(this.slowDownMs);
+                target.applySlow && target.applySlow(this.slowDownMs, 0.5);
 			}
 		})
 	}

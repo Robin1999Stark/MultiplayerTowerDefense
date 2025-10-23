@@ -35,7 +35,8 @@ export class UIScene extends Phaser.Scene {
 		
 		// Load effect icons
 		this.load.image('effect_freezing', 'assets/effects/freeze_effect_icon.jpeg')
-		
+		this.load.image('effect_area_damage', 'assets/effects/area_damage_effect_icon.jpeg')
+
 		// Create event icon (fallback)
 		const g = this.add.graphics()
 		g.clear()
@@ -195,7 +196,7 @@ export class UIScene extends Phaser.Scene {
 		cardContainer.add(bg)
 
 		// Event icon as background
-		if (event.icon === 'effect_freezing') {
+		if (event.icon === 'effect_freezing' || event.icon === 'effect_area_damage') {
 			const iconBg = this.add.image(0, 0, event.icon)
 			iconBg.setDisplaySize(width, height)
 			iconBg.setOrigin(0, 0)

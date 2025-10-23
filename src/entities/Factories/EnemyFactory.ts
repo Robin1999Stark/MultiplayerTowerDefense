@@ -21,7 +21,7 @@ export interface Enemy {
     takeDamage(amount: number): void;
     isDead(): boolean;
     destroy(): void;
-    applySlow?(durationMs: number): void;
+    applySlow?(durationMs: number, slowFactor: number): void;
 }
 
 export class EnemyFactory {
