@@ -8,7 +8,6 @@ export class RapidFireTower extends Tower {
 
     protected override timeSinceShot = 0
     private readonly bulletEffect?: Phaser.GameObjects.Graphics
-    private audioManager: AudioManager
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         super(scene, x, y, type)
@@ -20,12 +19,9 @@ export class RapidFireTower extends Tower {
         
         this.bulletEffect = scene.add.graphics()
         this.bulletEffect.setDepth(3)
-        
-        // Initialize the audio manager
-        this.audioManager = AudioManager.getInstance()
     }
 
-    override update(deltaMs: number, enemies: OrcGrunt[]): void {
+    public override update(deltaMs: number, enemies: OrcGrunt[]): void {
         // Don't call super.update() as we want our own rapid fire behavior
 
         this.timeSinceShot += deltaMs

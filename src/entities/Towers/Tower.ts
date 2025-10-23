@@ -10,7 +10,7 @@ export class Tower {
     public sprite: Phaser.GameObjects.Sprite
     protected scene: Phaser.Scene
     public readonly type: TowerType
-    private audioManager: AudioManager
+    protected audioManager: AudioManager
 
     protected range: number = 0
     protected fireRateMs: number = 0

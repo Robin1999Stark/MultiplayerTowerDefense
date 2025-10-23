@@ -8,7 +8,6 @@ export class AOETower extends Tower {
 
     private timeSinceAOE = 0
     private aoeEffect?: Phaser.GameObjects.Graphics
-    private audioManager: AudioManager
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         // Call parent constructor but we'll override the sprite
@@ -22,12 +21,9 @@ export class AOETower extends Tower {
         // Create a graphics object for the AOE effect (initially invisible)
         this.aoeEffect = scene.add.graphics()
         this.aoeEffect.setDepth(1) // Below enemies but above the path
-        
-        // Initialize the audio manager
-        this.audioManager = AudioManager.getInstance()
     }
 
-    override update(deltaMs: number, enemies: OrcGrunt[]): void {
+    public override update(deltaMs: number, enemies: OrcGrunt[]): void {
         // Don't call super.update() as we don't want the default shooting behavior
         
         this.timeSinceAOE += deltaMs

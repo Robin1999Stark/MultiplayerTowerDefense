@@ -46,7 +46,7 @@ export class GameScene extends Phaser.Scene {
 	private maxZoom = 2
 	private zoomStep = 0.1
 	private cameraSpeed = 200
-	private arrowKeys: { [key: string]: boolean } = {
+	private arrowKeys: { up: boolean; down: boolean; left: boolean; right: boolean } = {
 		up: false,
 		down: false,
 		left: false,
@@ -133,48 +133,51 @@ export class GameScene extends Phaser.Scene {
 	create(): void {
 		this.cameras.main.setBackgroundColor('#0b1020')
 
-		// Add 'm' key listener to toggle mute
-		this.input.keyboard.on('keydown-M', () => {
-			this.audioManager.toggleMute()
-		})
+		// Add keyboard event listeners if keyboard input is available
+		if (this.input.keyboard) {
+			// Add 'm' key listener to toggle mute
+			this.input.keyboard.on('keydown-M', () => {
+				this.audioManager.toggleMute()
+			})
 
-		// Add '+' key listener to zoom in
-		this.input.keyboard.on('keydown-PLUS', () => {
-			this.zoomIn()
-		})
+			// Add '+' key listener to zoom in
+			this.input.keyboard.on('keydown-PLUS', () => {
+				this.zoomIn()
+			})
 
-		// Add '-' key listener to zoom out
-		this.input.keyboard.on('keydown-MINUS', () => {
-			this.zoomOut()
-		})
+			// Add '-' key listener to zoom out
+			this.input.keyboard.on('keydown-MINUS', () => {
+				this.zoomOut()
+			})
 
-		// Add arrow key listeners for camera movement
-		this.input.keyboard.on('keydown-UP', () => {
-			this.arrowKeys.up = true
-		})
-		this.input.keyboard.on('keydown-DOWN', () => {
-			this.arrowKeys.down = true
-		})
-		this.input.keyboard.on('keydown-LEFT', () => {
-			this.arrowKeys.left = true
-		})
-		this.input.keyboard.on('keydown-RIGHT', () => {
-			this.arrowKeys.right = true
-		})
+			// Add arrow key listeners for camera movement
+			this.input.keyboard.on('keydown-UP', () => {
+				this.arrowKeys.up = true
+			})
+			this.input.keyboard.on('keydown-DOWN', () => {
+				this.arrowKeys.down = true
+			})
+			this.input.keyboard.on('keydown-LEFT', () => {
+				this.arrowKeys.left = true
+			})
+			this.input.keyboard.on('keydown-RIGHT', () => {
+				this.arrowKeys.right = true
+			})
 
-		// Add key up listeners to stop camera movement
-		this.input.keyboard.on('keyup-UP', () => {
-			this.arrowKeys.up = false
-		})
-		this.input.keyboard.on('keyup-DOWN', () => {
-			this.arrowKeys.down = false
-		})
-		this.input.keyboard.on('keyup-LEFT', () => {
-			this.arrowKeys.left = false
-		})
-		this.input.keyboard.on('keyup-RIGHT', () => {
-			this.arrowKeys.right = false
-		})
+			// Add key up listeners to stop camera movement
+			this.input.keyboard.on('keyup-UP', () => {
+				this.arrowKeys.up = false
+			})
+			this.input.keyboard.on('keyup-DOWN', () => {
+				this.arrowKeys.down = false
+			})
+			this.input.keyboard.on('keyup-LEFT', () => {
+				this.arrowKeys.left = false
+			})
+			this.input.keyboard.on('keyup-RIGHT', () => {
+				this.arrowKeys.right = false
+			})
+		}
 
 		// Add background image scaled to game size
 		const bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background')

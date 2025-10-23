@@ -8,7 +8,6 @@ export class FrostTower extends Tower {
 
     protected slowDownMs: number = 0
     protected slowFactor: number = 0
-    private audioManager: AudioManager
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		super(scene, x, y, type)
@@ -16,9 +15,6 @@ export class FrostTower extends Tower {
 		this.sprite.setScale(0.1)
         this.slowDownMs = this.getCurrentStats()?.slowDownMs ?? 5000;
         this.slowFactor = this.getCurrentStats()?.slowFactor ?? 0.5;
-
-        // Initialize audio manager
-        this.audioManager = AudioManager.getInstance();
 	}
 
 	protected override shoot(target: Enemy): void {

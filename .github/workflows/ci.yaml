@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  security-audit:
+  lint-and-security-audit:
     runs-on: ubuntu-latest
 
     steps:
