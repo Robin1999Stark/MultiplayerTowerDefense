@@ -79,7 +79,6 @@ export class StartScene extends Phaser.Scene {
 			'• Earn gold by defeating enemies',
 			'',
 			'TIP: Towers cannot be placed on the path!',
-			'Press M to mute the ugly Sound',
 		]
 
 		instructions.forEach((line, index) => {
@@ -104,42 +103,83 @@ export class StartScene extends Phaser.Scene {
 		})
 
 		// Start button
-		const buttonY = centerY + 200
+		const startButtonY = centerY + 180
 		const buttonWidth = 200
 		const buttonHeight = 50
 
-		// Button background
-		const buttonBg = this.add.rectangle(centerX, buttonY, buttonWidth, buttonHeight, 0x00d4ff, 0.2)
-		buttonBg.setStrokeStyle(2, 0x00d4ff)
-		buttonBg.setInteractive({ useHandCursor: true })
+		// Start button background
+		const startButtonBg = this.add.rectangle(centerX, startButtonY, buttonWidth, buttonHeight, 0x00d4ff, 0.2)
+		startButtonBg.setStrokeStyle(2, 0x00d4ff)
+		startButtonBg.setInteractive({ useHandCursor: true })
 
-		// Button text
-		const buttonText = this.add.text(centerX, buttonY, 'START GAME', {
+		// Start button text
+		const startButtonText = this.add.text(centerX, startButtonY, 'START GAME', {
 			fontSize: '24px',
 			color: '#00d4ff',
 			fontFamily: 'Arial, sans-serif',
 			fontStyle: 'bold',
 			resolution: 2
 		})
-		buttonText.setOrigin(0.5)
+		startButtonText.setOrigin(0.5)
 
-		// Button hover effects
-		buttonBg.on('pointerover', () => {
-			buttonBg.setFillStyle(0x00d4ff, 0.4)
-			buttonText.setColor('#ffffff')
+		// Controls button
+		const controlsButtonY = centerY + 250
+
+		// Controls button background
+		const controlsButtonBg = this.add.rectangle(centerX, controlsButtonY, buttonWidth, buttonHeight, 0x00d4ff, 0.2)
+		controlsButtonBg.setStrokeStyle(2, 0x00d4ff)
+		controlsButtonBg.setInteractive({ useHandCursor: true })
+
+		// Controls button text
+		const controlsButtonText = this.add.text(centerX, controlsButtonY, 'CONTROLS', {
+			fontSize: '24px',
+			color: '#00d4ff',
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
+		})
+		controlsButtonText.setOrigin(0.5)
+
+		// Button hover effects for start button
+		startButtonBg.on('pointerover', () => {
+			startButtonBg.setFillStyle(0x00d4ff, 0.4)
+			startButtonText.setColor('#ffffff')
 			this.tweens.add({
-				targets: [buttonBg, buttonText],
+				targets: [startButtonBg, startButtonText],
 				scale: 1.05,
 				duration: 200,
 				ease: 'Power2'
 			})
 		})
 
-		buttonBg.on('pointerout', () => {
-			buttonBg.setFillStyle(0x00d4ff, 0.2)
-			buttonText.setColor('#00d4ff')
+		startButtonBg.on('pointerout', () => {
+			startButtonBg.setFillStyle(0x00d4ff, 0.2)
+			startButtonText.setColor('#00d4ff')
 			this.tweens.add({
-				targets: [buttonBg, buttonText],
+				targets: [startButtonBg, startButtonText],
+				scale: 1,
+				duration: 200,
+				ease: 'Power2'
+			})
+		})
+
+		// Button hover effects for controls button
+		controlsButtonBg.on('pointerover', () => {
+			controlsButtonBg.setFillStyle(0x00d4ff, 0.4)
+			controlsButtonText.setColor('#ffffff')
+			this.tweens.add({
+				targets: [controlsButtonBg, controlsButtonText],
+				scale: 1.05,
+				duration: 200,
+				ease: 'Power2'
+			})
+		})
+
+		controlsButtonBg.on('pointerout', () => {
+			controlsButtonBg.setFillStyle(0x00d4ff, 0.2)
+			controlsButtonText.setColor('#00d4ff')
+			this.tweens.add({
+				targets: [controlsButtonBg, controlsButtonText],
 				scale: 1,
 				duration: 200,
 				ease: 'Power2'
@@ -147,8 +187,13 @@ export class StartScene extends Phaser.Scene {
 		})
 
 		// Start game on click
-		buttonBg.on('pointerdown', () => {
+		startButtonBg.on('pointerdown', () => {
 			this.startGame()
+		})
+
+		// Go to controls scene on click
+		controlsButtonBg.on('pointerdown', () => {
+			this.goToControlsScene()
 		})
 
 		// Also allow pressing SPACE or ENTER to start
@@ -160,7 +205,7 @@ export class StartScene extends Phaser.Scene {
 		})
 
 		// Pulsing "Press SPACE" hint
-		const spaceHint = this.add.text(centerX, buttonY + 50, 'Press SPACE or ENTER to start', {
+		const spaceHint = this.add.text(centerX, startButtonY + 120, 'Press SPACE or ENTER to start', {
 			fontSize: '16px',
 			color: '#666666',
 			fontFamily: 'Arial, sans-serif',
@@ -195,14 +240,14 @@ export class StartScene extends Phaser.Scene {
 		})
 
 		// Entrance animation for button (from below)
-		buttonBg.setY(buttonY + 100)
-		buttonBg.setAlpha(0)
-		buttonText.setY(buttonY + 100)
-		buttonText.setAlpha(0)
+		startButtonBg.setY(startButtonY + 100)
+		startButtonBg.setAlpha(0)
+		startButtonText.setY(startButtonY + 100)
+		startButtonText.setAlpha(0)
 
 		this.tweens.add({
-			targets: [buttonBg, buttonText],
-			y: buttonY,
+			targets: [startButtonBg, startButtonText],
+			y: startButtonY,
 			alpha: 1,
 			duration: 600,
 			delay: 1000,
@@ -507,5 +552,15 @@ export class StartScene extends Phaser.Scene {
 				// Ignore errors during cleanup
 			}
 		}
+	}
+
+	private goToControlsScene(): void {
+		// Fade out effect
+		this.cameras.main.fadeOut(500, 0, 0, 0)
+
+		this.cameras.main.once('camerafadeoutcomplete', () => {
+			// Stop this scene and start the controls scene
+			this.scene.start('ControlsScene')
+		})
 	}
 }
