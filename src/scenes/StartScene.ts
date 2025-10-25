@@ -239,7 +239,7 @@ export class StartScene extends Phaser.Scene {
 			delay: 300
 		})
 
-		// Entrance animation for button (from below)
+		// Entrance animation for start button (from below)
 		startButtonBg.setY(startButtonY + 100)
 		startButtonBg.setAlpha(0)
 		startButtonText.setY(startButtonY + 100)
@@ -251,6 +251,21 @@ export class StartScene extends Phaser.Scene {
 			alpha: 1,
 			duration: 600,
 			delay: 1000,
+			ease: 'Back.easeOut'
+		})
+
+		// Entrance animation for controls button (from below)
+		controlsButtonBg.setY(controlsButtonY + 100)
+		controlsButtonBg.setAlpha(0)
+		controlsButtonText.setY(controlsButtonY + 100)
+		controlsButtonText.setAlpha(0)
+
+		this.tweens.add({
+			targets: [controlsButtonBg, controlsButtonText],
+			y: controlsButtonY,
+			alpha: 1,
+			duration: 600,
+			delay: 1200, // Slightly longer delay for sequential animation
 			ease: 'Back.easeOut'
 		})
 	}
