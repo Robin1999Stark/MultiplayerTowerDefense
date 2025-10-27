@@ -10,7 +10,7 @@ export class FrostTower extends Tower {
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		super(scene, x, y, type)
-		this.sprite.setTexture('tower_frost')
+		this.sprite.setTexture(this.getBrauseTexture('tower_frost'))
 		this.sprite.setScale(0.1)
         this.slowDownMs = this.getCurrentStats()?.slowDownMs ?? 5000;
         this.slowFactor = this.getCurrentStats()?.slowFactor ?? 0.5;
@@ -21,7 +21,7 @@ export class FrostTower extends Tower {
 		this.playShootTone()
 
 		// Visual bullet: tweened sprite that slows on arrival
-		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow')
+		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture('arrow'))
 		bullet.setScale(0.03)
 		bullet.setOrigin(0.5, 0.5)
 		bullet.setDepth(3)

@@ -7,6 +7,7 @@ import { WaveFactory } from "../entities/Factories/WaveFactory";
 import { Event } from "../entities/Events/Event";
 import { EventStore } from "../services/EventStore";
 import { AudioManager } from "../services/AudioManager";
+import { GameConfigService } from "../services/GameConfigService";
 
 export const GAME_EVENTS = {
 	placeTowerToggle: 'ui.placeTowerToggle',
@@ -53,13 +54,15 @@ export class GameScene extends Phaser.Scene {
 		left: false,
 		right: false
 	}
+	private gameConfigService: GameConfigService
 
 	constructor() {
 		super(GameScene.KEY)
 		this.towerStore = TowerStore.getInstance()
 		this.eventStore = EventStore.getInstance()
 		this.audioManager = AudioManager.getInstance()
-		
+		this.gameConfigService = GameConfigService.getInstance()
+
 		// Select random background type for this game
 		const backgroundTypes = ['original', 'beach', 'ice']
 		this.currentBackgroundType = backgroundTypes[Math.floor(Math.random() * backgroundTypes.length)]!
@@ -88,8 +91,11 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
 		this.load.image('arrow', 'assets/projectiles/arrow.png')
 		this.load.image('background', 'assets/background.jpeg')
+		this.load.image('background_brause', 'assets/backgrounds/meadow_brause.jpeg')
 		this.load.image('background_beach', 'assets/backgrounds/beach.jpeg')
+		this.load.image('background_beach_brause', 'assets/backgrounds/beach_brause.jpeg')
 		this.load.image('background_ice', 'assets/backgrounds/ice.jpeg')
+		this.load.image('background_ice_brause', 'assets/backgrounds/ice_brause.jpeg')
 		this.load.image('floor_tile', 'assets/floor_tile.jpeg')
 		this.load.image('upgrade_arrow', 'assets/indicators/upgrade_arrow.png')
 
@@ -201,18 +207,18 @@ export class GameScene extends Phaser.Scene {
 
 		// Add random background image scaled to game size
 		let bg: Phaser.GameObjects.Image
-		
+
 		if (this.currentBackgroundType === 'original') {
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background')
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background'))
 		} else if (this.currentBackgroundType === 'beach') {
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background_beach')
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background_beach'))
 		} else if (this.currentBackgroundType === 'ice') {
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background_ice')
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background_ice'))
 		} else {
 			// Fallback to original
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, 'background')
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background'))
 		}
-		
+
 		bg.setDepth(-10)
 		const bgScaleX = this.scale.width / bg.width
 		const bgScaleY = this.scale.height / bg.height
@@ -241,7 +247,8 @@ export class GameScene extends Phaser.Scene {
 		});
 
 		// Draw the path using tiled floor sprites
-		const tex = this.textures.get('floor_tile')
+		const floorTileKey = this.getBrauseTexture('floor_tile')
+		const tex = this.textures.get(floorTileKey)
 		const src = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement | null
 		const tileW = 32
 		const tileH = 32
@@ -251,7 +258,7 @@ export class GameScene extends Phaser.Scene {
 		// First, draw corner tiles at waypoints to fill gaps
 		for (let i = 1; i < this.pathPoints.length - 1; i++) {
 			const waypoint = this.pathPoints[i]!
-			const cornerTile = this.add.tileSprite(waypoint.x, waypoint.y, tileW, tileH, 'floor_tile')
+			const cornerTile = this.add.tileSprite(waypoint.x, waypoint.y, tileW, tileH, floorTileKey)
 			cornerTile.setDepth(0)
 			cornerTile.setOrigin(0.5, 0.5)
 			cornerTile.tileScaleX = tileScaleX
@@ -286,7 +293,7 @@ export class GameScene extends Phaser.Scene {
 			const midY = (a.y + b.y) / 2
 			const dist = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y)
 			const angle = Phaser.Math.Angle.Between(a.x, a.y, b.x, b.y)
-			const stripe = this.add.tileSprite(midX, midY, dist, tileH, 'floor_tile')
+			const stripe = this.add.tileSprite(midX, midY, dist, tileH, floorTileKey)
 			stripe.setDepth(0)
 			stripe.setRotation(angle)
 			stripe.setOrigin(0.5, 0.5)
@@ -312,8 +319,8 @@ export class GameScene extends Phaser.Scene {
 		// Add castle at the end of the path
 		if (this.pathPoints.length > 0) {
 			const endPoint = this.pathPoints[this.pathPoints.length - 1]!
-			const castle = this.add.image(endPoint.x - 40, endPoint.y - 43, 'castle')
-			castle.setScale(0.15) // Scale down the castle to fit the game
+			const castle = this.add.image(endPoint.x - 40, endPoint.y - 43, this.getBrauseTexture('castle'))
+			castle.setScale(0.16) // Scale down the castle to fit the game
 			castle.setOrigin(0.5, 0.5)
 			castle.setDepth(1) // Place castle above path but below towers
 		}
@@ -561,7 +568,7 @@ export class GameScene extends Phaser.Scene {
 
 		const cost = tower.getNextUpgrade()?.cost ?? 0;
 
-		const img = this.add.image(0, 0, 'upgrade_arrow')
+		const img = this.add.image(0, 0, this.getBrauseTexture('upgrade_arrow'))
 			.setInteractive({ useHandCursor: true })
 			.setDepth(10)
 			.setScale(0.1)
@@ -741,7 +748,7 @@ export class GameScene extends Phaser.Scene {
 		let textureKey;
 		let scale;
 
-		switch (towerType.id) {
+			switch (towerType.id) {
 			case TowerTypeID.SNIPER:
 				textureKey = 'tower_laser'
 				scale = 0.1
@@ -766,7 +773,7 @@ export class GameScene extends Phaser.Scene {
 				textureKey = 'tower_basic'
 				scale = 0.08
 		}
-		this.ghostTower = this.add.sprite(0, 0, textureKey)
+		this.ghostTower = this.add.sprite(0, 0, this.getBrauseTexture(textureKey))
 		this.ghostTower.setDepth(1)
 		this.ghostTower.setAlpha(0.6)
 		this.ghostTower.setScale(scale)
@@ -932,6 +939,29 @@ export class GameScene extends Phaser.Scene {
 			this.cameras.main.scrollX += dx;
 			this.cameras.main.scrollY += dy;
 		}
+	}
+
+	/**
+	 * Get the appropriate texture key based on brause mode
+	 * If brause mode is enabled and a "_brause" version of the texture exists, use it
+	 * Otherwise, use the original texture
+	 * @param key The original texture key
+	 * @returns The texture key to use
+	 */
+	private getBrauseTexture(key: string): string {
+		// If brause mode is not enabled, use the original texture
+		if (!this.gameConfigService.isBrauseMode()) {
+			return key;
+		}
+
+		// Check if a "_brause" version of the texture exists
+		const brauseKey = key + '_brause';
+		if (this.textures.exists(brauseKey)) {
+			return brauseKey;
+		}
+
+		// If no "_brause" version exists, use the original texture
+		return key;
 	}
 
 }

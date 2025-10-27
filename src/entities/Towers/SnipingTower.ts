@@ -10,25 +10,25 @@ export class SnipingTower extends Tower {
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         super(scene, x, y, type)
-        
+
         this.sprite.destroy()
-        this.sprite = scene.add.sprite(x, y, 'tower_laser')
+        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture('tower_laser'))
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
-        
+
         this.laserEffect = scene.add.graphics()
         this.laserEffect.setDepth(3)
     }
 
     public override update(deltaMs: number, enemies: OrcGrunt[]): void {
         // Don't call super.update() as we want our own sniping behavior
-        
+
         this.timeSinceSnipe += deltaMs
         if (this.timeSinceSnipe < this.fireRateMs) return
-        
+
         const target = this.findFarthestTarget(enemies)
         if (!target) return
-        
+
         this.timeSinceSnipe = 0
         this.snipe(target)
     }
@@ -36,7 +36,7 @@ export class SnipingTower extends Tower {
     private findFarthestTarget(enemies: OrcGrunt[]): OrcGrunt | undefined {
         let farthest: OrcGrunt | undefined
         let farthestDist = 0
-        
+
         for (const enemy of enemies) {
             const distance = Phaser.Math.Distance.Between(
                 this.sprite.x, 
@@ -44,39 +44,39 @@ export class SnipingTower extends Tower {
                 enemy.sprite.x, 
                 enemy.sprite.y
             )
-            
+
             if (distance <= this.range && distance > farthestDist) {
                 farthestDist = distance
                 farthest = enemy
             }
         }
-        
+
         return farthest
     }
 
     private snipe(target: OrcGrunt): void {
         target.takeDamage(this.damage)
-        
+
         this.showLaserEffect(target)
-        
+
         this.playSnipeSound()
     }
 
     private showLaserEffect(target: OrcGrunt): void {
         if (!this.laserEffect) return
-        
+
         this.laserEffect.clear()
-        
+
         this.laserEffect.lineStyle(2, 0xff0000, 0.8)
         this.laserEffect.beginPath()
         this.laserEffect.moveTo(this.sprite.x, this.sprite.y)
         this.laserEffect.lineTo(target.sprite.x, target.sprite.y)
         this.laserEffect.closePath()
         this.laserEffect.strokePath()
-        
+
         this.laserEffect.fillStyle(0xff0000, 0.6)
         this.laserEffect.fillCircle(target.sprite.x, target.sprite.y, 15)
-        
+
         const scene = this.sprite.scene
         scene.tweens.add({
             targets: this.laserEffect,
@@ -94,7 +94,7 @@ export class SnipingTower extends Tower {
     private playSnipeSound(): void {
         // If audio is muted, don't play the sound
         if (this.audioManager.isMuted()) return
-        
+
         const scene = this.sprite.scene
         const sm = scene.sound as Phaser.Sound.WebAudioSoundManager
         const ctx: AudioContext | undefined = sm?.context || (window as Window & { audioCtx?: AudioContext }).audioCtx
@@ -109,26 +109,26 @@ export class SnipingTower extends Tower {
                 return
             }
         }
-        
+
         const durationSec = 0.15
-        
+
         const oscillator = audioCtx.createOscillator()
         const gainNode = audioCtx.createGain()
-        
+
         oscillator.type = 'sawtooth'
         oscillator.frequency.setValueAtTime(800, audioCtx.currentTime)
         oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + durationSec)
-        
+
         gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime)
         gainNode.gain.exponentialRampToValueAtTime(0.1, audioCtx.currentTime + 0.01)
         gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durationSec)
-        
+
         oscillator.connect(gainNode)
         gainNode.connect(audioCtx.destination)
-        
+
         oscillator.start()
         oscillator.stop(audioCtx.currentTime + durationSec)
-        
+
         oscillator.onended = () => {
             try { 
                 oscillator.disconnect(); 

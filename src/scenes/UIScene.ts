@@ -3,6 +3,7 @@ import { GAME_EVENTS } from './GameScene'
 import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 import { Event } from '../entities/Events/Event'
 import { EventStore } from '../services/EventStore'
+import { GameConfigService } from '../services/GameConfigService'
 
 export class UIScene extends Phaser.Scene {
 	static KEY = 'UIScene'
@@ -13,6 +14,7 @@ export class UIScene extends Phaser.Scene {
 	private placing = false
 	private towerStore: TowerStore
 	private eventStore: EventStore
+	private gameConfigService: GameConfigService
 	private towerStoreContainer?: Phaser.GameObjects.Container
 	private eventStoreContainer?: Phaser.GameObjects.Container
 	private selectedTowerType: TowerType | null = null
@@ -22,6 +24,7 @@ export class UIScene extends Phaser.Scene {
 		super(UIScene.KEY)
 		this.towerStore = TowerStore.getInstance()
 		this.eventStore = EventStore.getInstance()
+		this.gameConfigService = GameConfigService.getInstance()
 	}
 
 	preload(): void {
@@ -32,7 +35,7 @@ export class UIScene extends Phaser.Scene {
 		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
 		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
-		
+
 		// Load effect icons
 		this.load.image('effect_freezing', 'assets/effects/freeze_effect_icon.jpeg')
 		this.load.image('effect_area_damage', 'assets/effects/area_damage_effect_icon.jpeg')
@@ -58,7 +61,7 @@ export class UIScene extends Phaser.Scene {
         g.fillStyle(0x00aaff, 1)
         g.fillRoundedRect(0, 0, 32, 32, 8)
         g.generateTexture('event_gold_rush', 32, 32)
-		
+
 		// Create coin icon for costs
 		g.clear()
 		g.fillStyle(0xffd700, 1) // Gold color
@@ -81,7 +84,7 @@ export class UIScene extends Phaser.Scene {
 			this.updateTowerStoreUI()
 			this.updateEventStoreUI()
 		})
-		
+
 		// Listen for event type selection events
 		this.game.events.on(GAME_EVENTS.eventTypeSelected, (event: Event | null) => {
 			this.selectedEvent = event
@@ -95,7 +98,7 @@ export class UIScene extends Phaser.Scene {
 			this.updateTowerStoreUI()
 			this.updateEventStoreUI()
 		})
-		
+
 		// Listen for event activation to update UI
 		this.game.events.on(GAME_EVENTS.eventActivated, () => {
 			this.updateEventStoreUI()
@@ -179,7 +182,7 @@ export class UIScene extends Phaser.Scene {
 		escText.setDepth(1001)
 		this.towerStoreContainer.add(escText)
 	}
-	
+
 	private createEventStoreUI(): void {
 		const padding = 10
 		const cardWidth = 40
@@ -200,7 +203,7 @@ export class UIScene extends Phaser.Scene {
 			this.createEventCard(event, x, startY, cardWidth, cardHeight)
 		})
 	}
-	
+
 	private createEventCard(event: Event, x: number, y: number, width: number, height: number): void {
 		const cardContainer = this.add.container(x, y)
 
@@ -211,7 +214,7 @@ export class UIScene extends Phaser.Scene {
 		bg.setName('bg')
 		cardContainer.add(bg)
 
-        const iconBg = this.add.image(0, 0, event.icon)
+        const iconBg = this.add.image(0, 0, this.getBrauseTexture(event.icon))
         iconBg.setDisplaySize(width, height)
         iconBg.setOrigin(0, 0)
         iconBg.setAlpha(0.7)
@@ -224,11 +227,11 @@ export class UIScene extends Phaser.Scene {
 		activeIndicator.setName('active_indicator')
 		cardContainer.add(activeIndicator)
 
-		const coinIcon = this.add.image(width / 2 - 8, 10, 'coin_icon')
+		const coinIcon = this.add.image(width / 2 - 8, 10, this.getBrauseTexture('coin_icon'))
 		coinIcon.setScale(0.6)
 		coinIcon.setOrigin(0.5)
 		coinIcon.setName('coin_icon')
-		
+
 		const costText = this.add.text(width / 2 + 2, 10, `${event.cost}`, {
 			fontSize: '11px',
 			color: '#ffd700',
@@ -240,7 +243,7 @@ export class UIScene extends Phaser.Scene {
 		})
 		costText.setOrigin(0, 0.5)
 		costText.setName('cost')
-		
+
 		cardContainer.add(coinIcon)
 		cardContainer.add(costText)
 
@@ -271,7 +274,7 @@ export class UIScene extends Phaser.Scene {
 		cardContainer.setData('event', event)
 		cardContainer.setName(`event_${event.id}`)
 		this.eventStoreContainer?.add(cardContainer)
-		
+
 		// Make the card interactive
 		bg.setInteractive({ useHandCursor: true })
 		bg.on('pointerdown', () => {
@@ -318,7 +321,7 @@ export class UIScene extends Phaser.Scene {
 				textureKey = 'tower_basic'
 				scale = 0.15
 		}
-		const towerSprite = this.add.sprite(-width / 2, 28, textureKey)
+		const towerSprite = this.add.sprite(-width / 2, 28, this.getBrauseTexture(textureKey))
 		towerSprite.setScale(scale)
 		towerSprite.setDepth(0)
 		cardContainer.add(towerSprite)
@@ -424,7 +427,7 @@ export class UIScene extends Phaser.Scene {
 			}
 		})
 	}
-	
+
 	private updateEventStoreUI(): void {
 		if (!this.eventStoreContainer) return
 
@@ -482,4 +485,27 @@ export class UIScene extends Phaser.Scene {
 			}
 		})
 	}
-} 
+
+	/**
+	 * Get the appropriate texture key based on brause mode
+	 * If brause mode is enabled and a "_brause" version of the texture exists, use it
+	 * Otherwise, use the original texture
+	 * @param key The original texture key
+	 * @returns The texture key to use
+	 */
+	private getBrauseTexture(key: string): string {
+		// If brause mode is not enabled, use the original texture
+		if (!this.gameConfigService.isBrauseMode()) {
+			return key;
+		}
+
+		// Check if a "_brause" version of the texture exists
+		const brauseKey = key + '_brause';
+		if (this.textures.exists(brauseKey)) {
+			return brauseKey;
+		}
+
+		// If no "_brause" version exists, use the original texture
+		return key;
+	}
+}

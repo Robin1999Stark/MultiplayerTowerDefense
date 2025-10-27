@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { AudioManager } from '../services/AudioManager'
+import { GameConfigService } from '../services/GameConfigService'
 
 export class StartScene extends Phaser.Scene {
 	static KEY = 'StartScene'
@@ -7,10 +8,14 @@ export class StartScene extends Phaser.Scene {
 	private musicNodes: AudioNode[] = []
 	private musicGain?: GainNode
 	private audioManager: AudioManager
+	private gameConfigService: GameConfigService
+	private keyBuffer: string = ''
+	private readonly brauseCode: string = 'brause'
 
 	constructor() {
 		super(StartScene.KEY)
 		this.audioManager = AudioManager.getInstance()
+		this.gameConfigService = GameConfigService.getInstance()
 	}
 
 	create(): void {
@@ -23,6 +28,23 @@ export class StartScene extends Phaser.Scene {
 		// Add 'M' key listener to toggle mute
 		this.input.keyboard?.on('keydown-M', () => {
 			this.audioManager.toggleMute()
+		})
+
+		// Add keyboard listener for "brause" code
+		this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+			// Only track alphabetic characters
+			if (/^[a-z]$/i.test(event.key)) {
+				// Add the key to the buffer
+				this.keyBuffer += event.key.toLowerCase()
+
+				// Keep only the last 6 characters (length of "brause")
+				if (this.keyBuffer.length > this.brauseCode.length) {
+					this.keyBuffer = this.keyBuffer.substring(this.keyBuffer.length - this.brauseCode.length)
+				}
+
+				// Check if the buffer matches the code
+				this.checkBrauseCode()
+			}
 		})
 
 		// Start epic music after a brief delay to ensure audio context is ready
@@ -577,5 +599,77 @@ export class StartScene extends Phaser.Scene {
 			// Stop this scene and start the controls scene
 			this.scene.start('ControlsScene')
 		})
+	}
+
+	/**
+	 * Check if the key buffer matches the "brause" code and toggle brause mode if it does
+	 */
+	private checkBrauseCode(): void {
+		if (this.keyBuffer === this.brauseCode) {
+			// Toggle brause mode
+			const isBrauseMode = this.gameConfigService.toggleBrauseMode()
+
+			// Show feedback message
+			const statusText = isBrauseMode ? 'BRAUSE MODE ACTIVATED!' : 'BRAUSE MODE DEACTIVATED!'
+			const color = isBrauseMode ? '#ff00ff' : '#00ffff'
+
+			const text = this.add.text(
+				this.scale.width / 2,
+				this.scale.height / 4,
+				statusText,
+				{
+					fontFamily: 'Arial, sans-serif',
+					fontSize: '32px',
+					color: color,
+					stroke: '#000000',
+					strokeThickness: 5,
+					shadow: { color: '#000000', blur: 10, stroke: true, fill: true },
+					resolution: 2
+				}
+			)
+			text.setOrigin(0.5)
+			text.setDepth(1000)
+
+			// Fade in and out animation
+			this.tweens.add({
+				targets: text,
+				alpha: { from: 0, to: 1 },
+				duration: 500,
+				yoyo: true,
+				hold: 1000,
+				onComplete: () => {
+					text.destroy()
+				}
+			})
+
+			// Reset the key buffer
+			this.keyBuffer = ''
+
+			// Restart active game scenes to refresh textures
+			this.restartActiveScenes()
+		}
+	}
+
+	/**
+	 * Restart active game scenes to refresh textures when brause mode changes
+	 */
+	private restartActiveScenes(): void {
+		// Check if game scenes are active
+		const gameSceneActive = this.scene.isActive('GameScene')
+		const uiSceneActive = this.scene.isActive('UIScene')
+		const statisticsSceneActive = this.scene.isActive('StatisticsScene')
+
+		// If any game scene is active, restart all active scenes
+		if (gameSceneActive || uiSceneActive || statisticsSceneActive) {
+			// Stop all active scenes
+			if (gameSceneActive) this.scene.stop('GameScene')
+			if (uiSceneActive) this.scene.stop('UIScene')
+			if (statisticsSceneActive) this.scene.stop('StatisticsScene')
+
+			// Relaunch all previously active scenes
+			if (gameSceneActive) this.scene.launch('GameScene')
+			if (uiSceneActive) this.scene.launch('UIScene')
+			if (statisticsSceneActive) this.scene.launch('StatisticsScene')
+		}
 	}
 }

@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { Enemy } from '../Factories/EnemyFactory'
 import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
 import { AudioManager } from '../../services/AudioManager'
+import { GameConfigService } from '../../services/GameConfigService'
 
 export class Tower {
 
@@ -11,6 +12,7 @@ export class Tower {
     protected scene: Phaser.Scene
     public readonly type: TowerType
     protected audioManager: AudioManager
+    protected gameConfigService: GameConfigService
 
     protected range: number = 0
     protected fireRateMs: number = 0
@@ -24,11 +26,14 @@ export class Tower {
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         this.scene = scene;
         this.type = type;
-        this.sprite = scene.add.sprite(x, y, 'tower_basic');
-        this.sprite.setDepth(2);
-        
-        // Initialize audio manager
+
+        // Initialize services
         this.audioManager = AudioManager.getInstance();
+        this.gameConfigService = GameConfigService.getInstance();
+
+        // Create sprite with appropriate texture based on brause mode
+        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture('tower_basic'));
+        this.sprite.setDepth(2);
 
         const levelUpdate = this.getCurrentStats();
 
@@ -66,7 +71,7 @@ export class Tower {
         if (!target) return
         this.timeSinceShot = 0
         this.shoot(target)
-        
+
         // Update HP text position
         if (this.hpText) {
             this.hpText.setPosition(this.sprite.x, this.sprite.y + 20);
@@ -92,7 +97,7 @@ export class Tower {
         this.playShootTone()
 
         // Visual bullet: tweened sprite that damages on arrival
-        const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, 'arrow')
+        const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture('arrow'))
         bullet.setScale(0.03)
         bullet.setOrigin(0.5, 0.5)
         bullet.setDepth(3)
@@ -138,7 +143,7 @@ export class Tower {
     protected playShootTone(): void {
         // Don't play sound if muted
         if (this.audioManager.isMuted()) return
-        
+
         const audioCtx = this.getAudioContext()
         if (!audioCtx) return
 
@@ -235,13 +240,13 @@ export class Tower {
 		this.hp -= amount;
 
         this.updateHPDisplay();
-		
+
 		// Visual feedback for damage
 		this.sprite.setTintFill(0xff0000); // Red tint
 		this.scene.time.delayedCall(100, () => {
 			this.sprite.clearTint();
 		});
-		
+
 		// Check if tower is destroyed
 		if (this.hp <= 0) {
 			this.playDestroyEffect();
@@ -250,7 +255,7 @@ export class Tower {
 			}
 			return true;
 		}
-		
+
 		return false;
 	}
 
@@ -260,7 +265,7 @@ export class Tower {
 
 	private playDestroyEffect(): void {
 		// Create explosion effect
-		const particles = this.scene.add.particles(this.sprite.x, this.sprite.y, 'bullet', {
+		const particles = this.scene.add.particles(this.sprite.x, this.sprite.y, this.getBrauseTexture('bullet'), {
 			speed: { min: 100, max: 200 },
 			angle: { min: 0, max: 360 },
 			scale: { start: 1, end: 0 },
@@ -268,7 +273,7 @@ export class Tower {
 			blendMode: 'ADD',
 			quantity: 20
 		});
-		
+
 		// Fade out the tower
 		this.scene.tweens.add({
 			targets: this.sprite,
@@ -301,5 +306,28 @@ export class Tower {
 
     private buildHpText(): string {
         return `HP: ${this.hp}`;
+    }
+
+    /**
+     * Get the appropriate texture key based on brause mode
+     * If brause mode is enabled and a "_brause" version of the texture exists, use it
+     * Otherwise, use the original texture
+     * @param key The original texture key
+     * @returns The texture key to use
+     */
+    protected getBrauseTexture(key: string): string {
+        // If brause mode is not enabled, use the original texture
+        if (!this.gameConfigService.isBrauseMode()) {
+            return key;
+        }
+
+        // Check if a "_brause" version of the texture exists
+        const brauseKey = key + '_brause';
+        if (this.scene.textures.exists(brauseKey)) {
+            return brauseKey;
+        }
+
+        // If no "_brause" version exists, use the original texture
+        return key;
     }
 }
