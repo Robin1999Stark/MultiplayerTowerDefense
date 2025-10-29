@@ -4,6 +4,7 @@ import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 import { Event } from '../entities/Events/Event'
 import { EventStore } from '../services/EventStore'
 import { GameConfigService } from '../services/GameConfigService'
+import { BrauseColorService } from '../services/BrauseColorService'
 
 export class UIScene extends Phaser.Scene {
 	static KEY = 'UIScene'
@@ -15,6 +16,7 @@ export class UIScene extends Phaser.Scene {
 	private towerStore: TowerStore
 	private eventStore: EventStore
 	private gameConfigService: GameConfigService
+	private brauseColorService: BrauseColorService
 	private towerStoreContainer?: Phaser.GameObjects.Container
 	private eventStoreContainer?: Phaser.GameObjects.Container
 	private selectedTowerType: TowerType | null = null
@@ -25,6 +27,7 @@ export class UIScene extends Phaser.Scene {
 		this.towerStore = TowerStore.getInstance()
 		this.eventStore = EventStore.getInstance()
 		this.gameConfigService = GameConfigService.getInstance()
+		this.brauseColorService = BrauseColorService.getInstance()
 	}
 
 	preload(): void {
@@ -528,16 +531,8 @@ export class UIScene extends Phaser.Scene {
 			return;
 		}
 
-		// Define the brause colors
-		const brauseColors = [
-			0xfcef4f, // Yellow (RGB 252, 239, 79)
-			0x6aa83d, // Green (RGB 106, 168, 61)
-			0xdf7332, // Orange (RGB 223, 115, 50)
-			0xd52e73  // Pink (RGB 213, 46, 115)
-		];
-
-		// Select a random color
-		const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+		// Get a random color from the BrauseColorService
+		const randomColor = this.brauseColorService.getRandomColor();
 
 		// Apply the color to the game object
 		if (gameObject instanceof Phaser.GameObjects.Image || 

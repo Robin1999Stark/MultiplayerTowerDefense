@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { GameScene } from "@scenes/GameScene";
 import { Enemy } from "../Factories/EnemyFactory";
 import { GameConfigService } from "../../services/GameConfigService";
+import { BrauseColorService } from "../../services/BrauseColorService";
 
 export class OrcGrunt implements Enemy {
 	public sprite: Phaser.Physics.Arcade.Sprite
@@ -17,6 +18,7 @@ export class OrcGrunt implements Enemy {
 	private healthBar: Phaser.GameObjects.Graphics
 	private maxHp: number
 	private gameConfigService: GameConfigService
+	private brauseColorService: BrauseColorService
 
 	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number, textureKey: string = 'orc_grunt', radius: number = 16) {
 		this.sprite = scene.physics.add.sprite(x, y, textureKey)
@@ -28,6 +30,7 @@ export class OrcGrunt implements Enemy {
 		this.speed = speed
 		this.baseSpeed = speed
 		this.gameConfigService = GameConfigService.getInstance()
+		this.brauseColorService = BrauseColorService.getInstance()
 
 		// Create health bar
 		this.healthBar = scene.add.graphics()
@@ -143,16 +146,8 @@ export class OrcGrunt implements Enemy {
 			return
 		}
 
-		// Define the brause colors
-		const brauseColors = [
-			0xfcef4f, // Yellow (RGB 252, 239, 79)
-			0x6aa83d, // Green (RGB 106, 168, 61)
-			0xdf7332, // Orange (RGB 223, 115, 50)
-			0xd52e73  // Pink (RGB 213, 46, 115)
-		]
-
-		// Select a random color
-		const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)]
+		// Get a random color from the BrauseColorService
+		const randomColor = this.brauseColorService.getRandomColor()
 
 		// Apply the color to the sprite
 		this.sprite.setTint(randomColor)

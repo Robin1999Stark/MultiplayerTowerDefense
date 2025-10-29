@@ -3,6 +3,7 @@ import { Enemy } from '../Factories/EnemyFactory'
 import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
 import { AudioManager } from '../../services/AudioManager'
 import { GameConfigService } from '../../services/GameConfigService'
+import { BrauseColorService } from '../../services/BrauseColorService'
 
 export class Tower {
 
@@ -13,6 +14,7 @@ export class Tower {
     public readonly type: TowerType
     protected audioManager: AudioManager
     protected gameConfigService: GameConfigService
+    protected brauseColorService: BrauseColorService
 
     protected range: number = 0
     protected fireRateMs: number = 0
@@ -30,6 +32,7 @@ export class Tower {
         // Initialize services
         this.audioManager = AudioManager.getInstance();
         this.gameConfigService = GameConfigService.getInstance();
+        this.brauseColorService = BrauseColorService.getInstance();
 
         // Create sprite with appropriate texture based on brause mode
         const textureKey = 'tower_basic';
@@ -281,16 +284,8 @@ export class Tower {
 		// Check if we need to apply a brause color
 		let tint;
 		if (this.gameConfigService.isBrauseMode() && brauseTextureKey === bulletTextureKey) {
-			// Define the brause colors
-			const brauseColors = [
-				0xfcef4f, // Yellow (RGB 252, 239, 79)
-				0x6aa83d, // Green (RGB 106, 168, 61)
-				0xdf7332, // Orange (RGB 223, 115, 50)
-				0xd52e73  // Pink (RGB 213, 46, 115)
-			];
-
-			// Select a random color
-			tint = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+			// Get a random color from the BrauseColorService
+			tint = this.brauseColorService.getRandomColor();
 		}
 
 		const particleConfig: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig = {
@@ -383,16 +378,8 @@ export class Tower {
             return;
         }
 
-        // Define the brause colors
-        const brauseColors = [
-            0xfcef4f, // Yellow (RGB 252, 239, 79)
-            0x6aa83d, // Green (RGB 106, 168, 61)
-            0xdf7332, // Orange (RGB 223, 115, 50)
-            0xd52e73  // Pink (RGB 213, 46, 115)
-        ];
-
-        // Select a random color
-        const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+        // Get a random color from the BrauseColorService
+        const randomColor = this.brauseColorService.getRandomColor();
 
         // Apply the color to the game object
         if (gameObject instanceof Phaser.GameObjects.Image || 

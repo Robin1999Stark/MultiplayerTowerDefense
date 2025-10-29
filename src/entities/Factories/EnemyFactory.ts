@@ -14,6 +14,7 @@ import { TowerAttacker } from '../Units/TowerAttacker';
 import { GAME_EVENTS } from '../../scenes/GameScene';
 import { AudioManager } from '../../services/AudioManager';
 import { GameConfigService } from '../../services/GameConfigService';
+import { BrauseColorService } from '../../services/BrauseColorService';
 
 export interface Enemy {
     sprite: Phaser.Physics.Arcade.Sprite;
@@ -36,12 +37,14 @@ export class EnemyFactory {
     private goldEarningFunction: (isBoss: boolean) => number = (isBoss: boolean) => isBoss ? 100 : 10;
     private audioManager: AudioManager;
     private gameConfigService: GameConfigService;
+    private brauseColorService: BrauseColorService;
 
     constructor(scene: Phaser.Scene, pathPoints: Phaser.Math.Vector2[]) {
         this.scene = scene;
         this.pathPoints = pathPoints;
         this.audioManager = AudioManager.getInstance();
         this.gameConfigService = GameConfigService.getInstance();
+        this.brauseColorService = BrauseColorService.getInstance();
     }
 
     public getEnemies(): Enemy[] {
@@ -290,16 +293,8 @@ export class EnemyFactory {
             return;
         }
 
-        // Define the brause colors
-        const brauseColors = [
-            0xfcef4f, // Yellow (RGB 252, 239, 79)
-            0x6aa83d, // Green (RGB 106, 168, 61)
-            0xdf7332, // Orange (RGB 223, 115, 50)
-            0xd52e73  // Pink (RGB 213, 46, 115)
-        ];
-
-        // Select a random color
-        const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+        // Get a random color from the BrauseColorService
+        const randomColor = this.brauseColorService.getRandomColor();
 
         // Apply the color to the game object
         if (gameObject instanceof Phaser.GameObjects.Image || 

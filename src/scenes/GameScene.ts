@@ -8,6 +8,7 @@ import { Event } from "../entities/Events/Event";
 import { EventStore } from "../services/EventStore";
 import { AudioManager } from "../services/AudioManager";
 import { GameConfigService } from "../services/GameConfigService";
+import { BrauseColorService } from "../services/BrauseColorService";
 
 export const GAME_EVENTS = {
 	placeTowerToggle: 'ui.placeTowerToggle',
@@ -55,6 +56,7 @@ export class GameScene extends Phaser.Scene {
 		right: false
 	}
 	private gameConfigService: GameConfigService
+	private brauseColorService: BrauseColorService
 	private floorTileColor: number | null = null
 
 	constructor() {
@@ -63,6 +65,7 @@ export class GameScene extends Phaser.Scene {
 		this.eventStore = EventStore.getInstance()
 		this.audioManager = AudioManager.getInstance()
 		this.gameConfigService = GameConfigService.getInstance()
+		this.brauseColorService = BrauseColorService.getInstance()
 
 		// Select random background type for this game
 		const backgroundTypes = ['original', 'beach', 'ice']
@@ -1011,26 +1014,18 @@ export class GameScene extends Phaser.Scene {
 			return;
 		}
 
-		// Define the brause colors
-		const brauseColors = [
-			0xfcef4f, // Yellow (RGB 252, 239, 79)
-			0x6aa83d, // Green (RGB 106, 168, 61)
-			0xdf7332, // Orange (RGB 223, 115, 50)
-			0xd52e73  // Pink (RGB 213, 46, 115)
-		];
-
 		let colorToApply: number;
 
 		// For floor tiles, use the same color for all tiles
 		if (textureKey === 'floor_tile') {
 			// If floorTileColor is not set yet, select a random color and store it
 			if (this.floorTileColor === null) {
-				this.floorTileColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+				this.floorTileColor = this.brauseColorService.getRandomColor();
 			}
 			colorToApply = this.floorTileColor;
 		} else {
 			// For other objects, use a random color
-			colorToApply = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+			colorToApply = this.brauseColorService.getRandomColor();
 		}
 
 		// Apply the color to the game object

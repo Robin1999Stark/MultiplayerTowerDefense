@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { AudioManager } from '../services/AudioManager'
 import { GameConfigService } from '../services/GameConfigService'
+import { BrauseColorService } from '../services/BrauseColorService'
 
 export class StartScene extends Phaser.Scene {
 	static KEY = 'StartScene'
@@ -9,6 +10,7 @@ export class StartScene extends Phaser.Scene {
 	private musicGain?: GainNode
 	private audioManager: AudioManager
 	private gameConfigService: GameConfigService
+	private brauseColorService: BrauseColorService
 	private keyBuffer: string = ''
 	private readonly brauseCode: string = 'brause'
 
@@ -16,6 +18,7 @@ export class StartScene extends Phaser.Scene {
 		super(StartScene.KEY)
 		this.audioManager = AudioManager.getInstance()
 		this.gameConfigService = GameConfigService.getInstance()
+		this.brauseColorService = BrauseColorService.getInstance()
 	}
 
 	create(): void {
@@ -321,13 +324,8 @@ export class StartScene extends Phaser.Scene {
 	 * These particles appear for a short time when Brause mode is activated
 	 */
 	private createBrauseParticles(): void {
-		// Define the brause colors
-		const brauseColors = [
-			0xfcef4f, // Yellow (RGB 252, 239, 79)
-			0x6aa83d, // Green (RGB 106, 168, 61)
-			0xdf7332, // Orange (RGB 223, 115, 50)
-			0xd52e73  // Pink (RGB 213, 46, 115)
-		]
+		// Get the brause colors from the BrauseColorService
+		const brauseColors = BrauseColorService.BRAUSE_COLORS
 
 		// Create a container for all particles to make cleanup easier
 		const particleContainer = this.add.container(0, 0)
@@ -685,13 +683,8 @@ export class StartScene extends Phaser.Scene {
 			// Toggle brause mode
 			const isBrauseMode = this.gameConfigService.toggleBrauseMode()
 
-			// Define the brause colors
-			const brauseColors = [
-				0xfcef4f, // Yellow (RGB 252, 239, 79)
-				0x6aa83d, // Green (RGB 106, 168, 61)
-				0xdf7332, // Orange (RGB 223, 115, 50)
-				0xd52e73  // Pink (RGB 213, 46, 115)
-			]
+			// Get the brause colors from the BrauseColorService
+			const brauseColors = BrauseColorService.BRAUSE_COLORS
 
 			// Show feedback message
 			const statusText = isBrauseMode ? 'BRAUSE MODE ACTIVATED!' : 'BRAUSE MODE DEACTIVATED!'
