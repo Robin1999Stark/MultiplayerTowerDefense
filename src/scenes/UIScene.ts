@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { GAME_EVENTS } from './GameScene'
+import { GAME_EVENTS, GameScene } from './GameScene'
 import { TowerStore, TowerType, TowerTypeID } from '../services/TowerStore'
 import { Event } from '../entities/Events/Event'
 import { EventStore } from '../services/EventStore'
@@ -437,7 +437,7 @@ export class UIScene extends Phaser.Scene {
 		if (!this.eventStoreContainer) return
 
 		const gold = this.registry.get('gold') as number || 0
-		const gameScene = this.scene.get('GameScene') as any
+		const gameScene = this.scene.get('GameScene') as GameScene
 
 		this.eventStoreContainer.iterate((child: Phaser.GameObjects.GameObject) => {
 			if (child instanceof Phaser.GameObjects.Container) {

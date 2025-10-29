@@ -251,7 +251,7 @@ export class Tower {
 
         this.updateHPDisplay();
 
- 	// Visual feedback for damage
+	// Visual feedback for damage
 		this.sprite.setTintFill(0xff0000); // Red tint
 		this.scene.time.delayedCall(100, () => {
 			this.sprite.clearTint();

@@ -617,7 +617,7 @@ export class GameScene extends Phaser.Scene {
 		priceText.x = arrowW / 2 + margin
 		priceText.y = -arrowH / 2
 
-		img.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: any) => {
+		img.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
 			if (event && typeof event.stopPropagation === 'function') event.stopPropagation()
 			this.upgradeTower(tower)
 		})

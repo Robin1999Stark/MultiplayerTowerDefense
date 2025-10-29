@@ -474,16 +474,16 @@ export class StartScene extends Phaser.Scene {
 
 	private getAudioContext(): AudioContext | null {
 		const phaserSound = this.sound as { context?: AudioContext }
-		const existingCtx = phaserSound?.context || (window as any).audioCtx
+		const existingCtx = phaserSound?.context || window.audioCtx
 
 		if (existingCtx) return existingCtx
 
 		try {
-			const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext
+			const AudioContextClass = window.AudioContext || window.webkitAudioContext
 			if (!AudioContextClass) return null
 
 			const newCtx = new AudioContextClass()
-			;(window as any).audioCtx = newCtx
+			window.audioCtx = newCtx
 			return newCtx
 		} catch (error) {
 			return null
