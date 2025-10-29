@@ -55,6 +55,7 @@ export class GameScene extends Phaser.Scene {
 		right: false
 	}
 	private gameConfigService: GameConfigService
+	private floorTileColor: number | null = null
 
 	constructor() {
 		super(GameScene.KEY)
@@ -992,7 +993,9 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	/**
-	 * Apply a random brause color to a game object if it doesn't have a "_brause" texture
+	 * Apply a brause color to a game object if it doesn't have a "_brause" texture
+	 * For floor tiles, use the same color for all tiles
+	 * For other objects, use a random color
 	 * @param gameObject The game object to apply the color to
 	 * @param textureKey The texture key used for the game object
 	 */
@@ -1016,13 +1019,25 @@ export class GameScene extends Phaser.Scene {
 			0xd52e73  // Pink (RGB 213, 46, 115)
 		];
 
-		// Select a random color
-		const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+		let colorToApply: number;
+
+		// For floor tiles, use the same color for all tiles
+		if (textureKey === 'floor_tile') {
+			// If floorTileColor is not set yet, select a random color and store it
+			if (this.floorTileColor === null) {
+				this.floorTileColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+			}
+			colorToApply = this.floorTileColor;
+		} else {
+			// For other objects, use a random color
+			colorToApply = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+		}
 
 		// Apply the color to the game object
 		if (gameObject instanceof Phaser.GameObjects.Image || 
-			gameObject instanceof Phaser.GameObjects.Sprite) {
-			gameObject.setTint(randomColor);
+			gameObject instanceof Phaser.GameObjects.Sprite ||
+			gameObject instanceof Phaser.GameObjects.TileSprite) {
+			gameObject.setTint(colorToApply);
 		}
 	}
 
