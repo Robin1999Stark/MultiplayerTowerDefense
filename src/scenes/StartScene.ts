@@ -738,6 +738,8 @@ export class StartScene extends Phaser.Scene {
 			// Create particles if Brause mode is activated
 			if (isBrauseMode) {
 				this.createBrauseParticles()
+				// Play epic jingle when Brause mode is activated
+				this.playBrauseJingle()
 			}
 
 			// Reset the key buffer
@@ -749,8 +751,108 @@ export class StartScene extends Phaser.Scene {
 	}
 
 	/**
-	 * Restart active game scenes to refresh textures when brause mode changes
+	 * Play an epic jingle when Brause mode is activated
 	 */
+	private playBrauseJingle(): void {
+		// Don't play sound if muted
+		if (this.audioManager.isMuted()) return
+
+		const ctx = this.audioContext || this.getAudioContext()
+		if (!ctx) return
+
+		// Epic jingle duration
+		const duration = 1.5
+		const startTime = ctx.currentTime
+
+		// Create a powerful bass sound
+		const bass = ctx.createOscillator()
+		bass.type = 'sine'
+		bass.frequency.setValueAtTime(80, startTime)
+		bass.frequency.exponentialRampToValueAtTime(120, startTime + 0.3)
+		bass.frequency.exponentialRampToValueAtTime(80, startTime + 0.6)
+
+		const bassGain = ctx.createGain()
+		bassGain.gain.setValueAtTime(0.3, startTime)
+		bassGain.gain.exponentialRampToValueAtTime(0.1, startTime + 0.6)
+		bassGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+
+		bass.connect(bassGain)
+		bassGain.connect(ctx.destination)
+		bass.start(startTime)
+		bass.stop(startTime + duration)
+
+		// Create a triumphant melody
+		const notes = [
+			{ freq: 523.25, start: 0.0, duration: 0.2 },  // C5
+			{ freq: 659.25, start: 0.2, duration: 0.2 },  // E5
+			{ freq: 783.99, start: 0.4, duration: 0.4 },  // G5
+			{ freq: 1046.50, start: 0.8, duration: 0.7 }  // C6 (held longer for dramatic effect)
+		]
+
+		notes.forEach(note => {
+			const osc = ctx.createOscillator()
+			osc.type = 'square'
+			osc.frequency.setValueAtTime(note.freq, startTime + note.start)
+
+			const gain = ctx.createGain()
+			gain.gain.setValueAtTime(0.001, startTime + note.start)
+			gain.gain.exponentialRampToValueAtTime(0.15, startTime + note.start + 0.05)
+			gain.gain.exponentialRampToValueAtTime(0.001, startTime + note.start + note.duration)
+
+			osc.connect(gain)
+			gain.connect(ctx.destination)
+			osc.start(startTime + note.start)
+			osc.stop(startTime + note.start + note.duration)
+		})
+
+		// Add some sparkle effects (high frequency sounds)
+		for (let i = 0; i < 8; i++) {
+			const sparkle = ctx.createOscillator()
+			sparkle.type = 'sine'
+
+			// Random high frequency
+			const freq = 2000 + Math.random() * 3000
+			const sparkleStart = startTime + 0.8 + (i * 0.05)
+
+			sparkle.frequency.setValueAtTime(freq, sparkleStart)
+			sparkle.frequency.exponentialRampToValueAtTime(freq * 1.5, sparkleStart + 0.1)
+
+			const sparkleGain = ctx.createGain()
+			sparkleGain.gain.setValueAtTime(0.001, sparkleStart)
+			sparkleGain.gain.exponentialRampToValueAtTime(0.05, sparkleStart + 0.02)
+			sparkleGain.gain.exponentialRampToValueAtTime(0.001, sparkleStart + 0.1)
+
+			sparkle.connect(sparkleGain)
+			sparkleGain.connect(ctx.destination)
+			sparkle.start(sparkleStart)
+			sparkle.stop(sparkleStart + 0.1)
+		}
+
+		// Add a final chord for resolution
+		const finalChord = [
+			{ freq: 523.25, gain: 0.1 },  // C5
+			{ freq: 659.25, gain: 0.08 }, // E5
+			{ freq: 783.99, gain: 0.08 }, // G5
+			{ freq: 1046.50, gain: 0.06 } // C6
+		]
+
+		finalChord.forEach(note => {
+			const osc = ctx.createOscillator()
+			osc.type = 'triangle'
+			osc.frequency.setValueAtTime(note.freq, startTime + 1.2)
+
+			const gain = ctx.createGain()
+			gain.gain.setValueAtTime(0.001, startTime + 1.2)
+			gain.gain.exponentialRampToValueAtTime(note.gain, startTime + 1.3)
+			gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration)
+
+			osc.connect(gain)
+			gain.connect(ctx.destination)
+			osc.start(startTime + 1.2)
+			osc.stop(startTime + duration)
+		})
+	}
+
 	private restartActiveScenes(): void {
 		// Check if game scenes are active
 		const gameSceneActive = this.scene.isActive('GameScene')
