@@ -615,11 +615,11 @@ export class StartScene extends Phaser.Scene {
 
 			const text = this.add.text(
 				this.scale.width / 2,
-				this.scale.height / 4,
+				this.scale.height / 6,
 				statusText,
 				{
 					fontFamily: 'Arial, sans-serif',
-					fontSize: '32px',
+					fontSize: '48px',
 					color: color,
 					stroke: '#000000',
 					strokeThickness: 5,
