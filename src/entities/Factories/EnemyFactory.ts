@@ -13,13 +13,14 @@ import { Zombie } from '../Units/Zombie';
 import { TowerAttacker } from '../Units/TowerAttacker';
 import { GAME_EVENTS } from '../../scenes/GameScene';
 import { AudioManager } from '../../services/AudioManager';
+import { GameConfigService } from '../../services/GameConfigService';
 
 export interface Enemy {
     sprite: Phaser.Physics.Arcade.Sprite;
     hp: number;
     speed: number;
     reachedEnd: boolean;
-    
+
     update(deltaMs: number, path: Phaser.Math.Vector2[]): void;
     takeDamage(amount: number): void;
     isDead(): boolean;
@@ -34,11 +35,13 @@ export class EnemyFactory {
     private readonly pathPoints: Phaser.Math.Vector2[] = [];
     private goldEarningFunction: (isBoss: boolean) => number = (isBoss: boolean) => isBoss ? 100 : 10;
     private audioManager: AudioManager;
+    private gameConfigService: GameConfigService;
 
     constructor(scene: Phaser.Scene, pathPoints: Phaser.Math.Vector2[]) {
         this.scene = scene;
         this.pathPoints = pathPoints;
         this.audioManager = AudioManager.getInstance();
+        this.gameConfigService = GameConfigService.getInstance();
     }
 
     public getEnemies(): Enemy[] {
@@ -99,6 +102,18 @@ export class EnemyFactory {
 
     private spawnEnemy(enemyType: { spawn(scene: Phaser.Scene, wave: number): Enemy }, wave: number): void {
         const enemy = enemyType.spawn(this.scene, wave);
+
+        // Apply Brause color to the enemy sprite if in Brause mode
+        const textureKey = enemy.sprite.texture.key;
+        // Use getBrauseTexture to check if a "_brause" version exists and use it
+        const brauseTextureKey = this.getBrauseTexture(textureKey);
+        if (brauseTextureKey !== textureKey) {
+            enemy.sprite.setTexture(brauseTextureKey);
+        } else {
+            // If no "_brause" version exists, apply a random Brause color
+            this.applyBrauseColor(enemy.sprite, textureKey);
+        }
+
         this.enemies.push(enemy);
     }
 
@@ -108,7 +123,7 @@ export class EnemyFactory {
 
         for (const enemy of [...this.enemies]) {
             enemy.update(delta, this.pathPoints);
-            
+
             if (enemy.isDead()) {
                 const isBoss = enemy.sprite.texture.key === 'orc_warrior';
                 goldEarned += this.goldEarningFunction(isBoss);
@@ -233,5 +248,72 @@ export class EnemyFactory {
         } catch (error) {
             return null;
         }
+    }
+
+    /**
+     * Get the appropriate texture key based on brause mode
+     * If brause mode is enabled and a "_brause" version of the texture exists, use it
+     * Otherwise, use the original texture
+     * @param key The original texture key
+     * @returns The texture key to use
+     */
+    private getBrauseTexture(key: string): string {
+        // If brause mode is not enabled, use the original texture
+        if (!this.gameConfigService.isBrauseMode()) {
+            return key;
+        }
+
+        // Check if a "_brause" version of the texture exists
+        const brauseKey = key + '_brause';
+        if (this.scene.textures.exists(brauseKey)) {
+            return brauseKey;
+        }
+
+        // If no "_brause" version exists, use the original texture
+        return key;
+    }
+
+    /**
+     * Apply a random brause color to a game object if it doesn't have a "_brause" texture
+     * @param gameObject The game object to apply the color to
+     * @param textureKey The texture key used for the game object
+     */
+    private applyBrauseColor(gameObject: Phaser.GameObjects.GameObject, textureKey: string): void {
+        // Only apply color in brause mode
+        if (!this.gameConfigService.isBrauseMode()) {
+            return;
+        }
+
+        // Only apply color if there's no "_brause" version of the texture
+        const brauseKey = textureKey + '_brause';
+        if (this.scene.textures.exists(brauseKey)) {
+            return;
+        }
+
+        // Define the brause colors
+        const brauseColors = [
+            0xfcef4f, // Yellow (RGB 252, 239, 79)
+            0x6aa83d, // Green (RGB 106, 168, 61)
+            0xdf7332, // Orange (RGB 223, 115, 50)
+            0xd52e73  // Pink (RGB 213, 46, 115)
+        ];
+
+        // Select a random color
+        const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+
+        // Apply the color to the game object
+        if (gameObject instanceof Phaser.GameObjects.Image || 
+            gameObject instanceof Phaser.GameObjects.Sprite) {
+            gameObject.setTint(randomColor);
+        }
+    }
+
+    /**
+     * Reapply brause color to an enemy sprite
+     * @param enemy The enemy to reapply the color to
+     */
+    public reapplyBrauseColor(enemy: Enemy): void {
+        const textureKey = enemy.sprite.texture.key;
+        this.applyBrauseColor(enemy.sprite, textureKey);
     }
 }

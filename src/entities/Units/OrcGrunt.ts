@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { GameScene } from "@scenes/GameScene";
 import { Enemy } from "../Factories/EnemyFactory";
+import { GameConfigService } from "../../services/GameConfigService";
 
 export class OrcGrunt implements Enemy {
 	public sprite: Phaser.Physics.Arcade.Sprite
@@ -15,6 +16,7 @@ export class OrcGrunt implements Enemy {
 	private isSlowed = false
 	private healthBar: Phaser.GameObjects.Graphics
 	private maxHp: number
+	private gameConfigService: GameConfigService
 
 	constructor(scene: Phaser.Scene, x: number, y: number, hp: number, speed: number, textureKey: string = 'orc_grunt', radius: number = 16) {
 		this.sprite = scene.physics.add.sprite(x, y, textureKey)
@@ -25,6 +27,7 @@ export class OrcGrunt implements Enemy {
 		this.maxHp = hp
 		this.speed = speed
 		this.baseSpeed = speed
+		this.gameConfigService = GameConfigService.getInstance()
 
 		// Create health bar
 		this.healthBar = scene.add.graphics()
@@ -74,6 +77,14 @@ export class OrcGrunt implements Enemy {
 	takeDamage(amount: number): void {
 		this.hp -= amount
 		this.updateHealthBar()
+
+		// Visual feedback for damage
+		this.sprite.setTint(0xff0000) // Red tint
+		this.sprite.scene.time.delayedCall(100, () => {
+			this.sprite.clearTint()
+			// Reapply Brause color after the damage effect
+			this.applyBrauseColor()
+		})
 	}
 
 	private updateHealthBar(): void {
@@ -111,6 +122,40 @@ export class OrcGrunt implements Enemy {
 		this.slowTimer = 0
 		this.slowDuration = 0
 		this.sprite.clearTint() // Remove blue tint
+
+		// Reapply Brause color after clearing the tint
+		this.applyBrauseColor()
+	}
+
+	/**
+	 * Apply a random brause color to the enemy sprite if in brause mode
+	 */
+	private applyBrauseColor(): void {
+		// Only apply color in brause mode
+		if (!this.gameConfigService.isBrauseMode()) {
+			return
+		}
+
+		// Only apply color if there's no "_brause" version of the texture
+		const textureKey = this.sprite.texture.key
+		const brauseKey = textureKey + '_brause'
+		if (this.sprite.scene.textures.exists(brauseKey)) {
+			return
+		}
+
+		// Define the brause colors
+		const brauseColors = [
+			0xfcef4f, // Yellow (RGB 252, 239, 79)
+			0x6aa83d, // Green (RGB 106, 168, 61)
+			0xdf7332, // Orange (RGB 223, 115, 50)
+			0xd52e73  // Pink (RGB 213, 46, 115)
+		]
+
+		// Select a random color
+		const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)]
+
+		// Apply the color to the sprite
+		this.sprite.setTint(randomColor)
 	}
 
 	isDead(): boolean {
