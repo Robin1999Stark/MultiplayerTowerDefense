@@ -316,6 +316,82 @@ export class StartScene extends Phaser.Scene {
 		}
 	}
 
+	/**
+	 * Create particles in Brause colors that fly across the screen
+	 * These particles appear for a short time when Brause mode is activated
+	 */
+	private createBrauseParticles(): void {
+		// Define the brause colors
+		const brauseColors = [
+			0xfcef4f, // Yellow (RGB 252, 239, 79)
+			0x6aa83d, // Green (RGB 106, 168, 61)
+			0xdf7332, // Orange (RGB 223, 115, 50)
+			0xd52e73  // Pink (RGB 213, 46, 115)
+		]
+
+		// Create a container for all particles to make cleanup easier
+		const particleContainer = this.add.container(0, 0)
+		particleContainer.setDepth(999) // Just below the text message
+
+		// Create more particles for a more dramatic effect
+		const particleCount = 50
+		const particles: Phaser.GameObjects.Arc[] = []
+
+		// Create particles with random positions, sizes, and colors
+		for (let i = 0; i < particleCount; i++) {
+			// Randomly position particles around the edges of the screen
+			let x, y
+			if (Math.random() < 0.5) {
+				// Position on left or right edge
+				x = Math.random() < 0.5 ? -20 : this.scale.width + 20
+				y = Phaser.Math.Between(0, this.scale.height)
+			} else {
+				// Position on top or bottom edge
+				x = Phaser.Math.Between(0, this.scale.width)
+				y = Math.random() < 0.5 ? -20 : this.scale.height + 20
+			}
+
+			// Random size (larger than background particles)
+			const size = Phaser.Math.Between(3, 8)
+
+			// Random Brause color
+			const color = brauseColors[Math.floor(Math.random() * brauseColors.length)]
+
+			// Create the particle
+			const particle = this.add.circle(x, y, size, color, 0.8)
+			particles.push(particle)
+			particleContainer.add(particle)
+
+			// Calculate a random destination point on the opposite side of the screen
+			const destX = x < this.scale.width / 2 ? 
+				this.scale.width + 50 : -50
+			const destY = y < this.scale.height / 2 ? 
+				this.scale.height + 50 : -50
+
+			// Add some randomness to the destination
+			const randomOffsetX = Phaser.Math.Between(-200, 200)
+			const randomOffsetY = Phaser.Math.Between(-200, 200)
+
+			// Animation: fly across the screen with some rotation and scaling
+			this.tweens.add({
+				targets: particle,
+				x: destX + randomOffsetX,
+				y: destY + randomOffsetY,
+				scale: { from: 0.5, to: 1.5 },
+				alpha: { from: 0, to: 0.8, duration: 300, yoyo: true, hold: 1000 },
+				angle: Phaser.Math.Between(-180, 180),
+				duration: Phaser.Math.Between(2000, 4000),
+				ease: 'Sine.easeInOut',
+				delay: Phaser.Math.Between(0, 1000)
+			})
+		}
+
+		// Destroy all particles after a few seconds
+		this.time.delayedCall(5000, () => {
+			particleContainer.destroy()
+		})
+	}
+
 	private startGame(): void {
 		// Play funny start sound!
 		this.playStartSound()
@@ -609,9 +685,26 @@ export class StartScene extends Phaser.Scene {
 			// Toggle brause mode
 			const isBrauseMode = this.gameConfigService.toggleBrauseMode()
 
+			// Define the brause colors
+			const brauseColors = [
+				0xfcef4f, // Yellow (RGB 252, 239, 79)
+				0x6aa83d, // Green (RGB 106, 168, 61)
+				0xdf7332, // Orange (RGB 223, 115, 50)
+				0xd52e73  // Pink (RGB 213, 46, 115)
+			]
+
 			// Show feedback message
 			const statusText = isBrauseMode ? 'BRAUSE MODE ACTIVATED!' : 'BRAUSE MODE DEACTIVATED!'
-			const color = isBrauseMode ? '#ff00ff' : '#00ffff'
+
+			// Use a random Brause color for the activated message, or the original color for deactivated
+			let color: string
+			if (isBrauseMode) {
+				// Select a random Brause color and convert to CSS color string
+				const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)]
+				color = '#' + randomColor.toString(16).padStart(6, '0')
+			} else {
+				color = '#00ffff' // Original color for deactivated
+			}
 
 			const text = this.add.text(
 				this.scale.width / 2,
@@ -641,6 +734,11 @@ export class StartScene extends Phaser.Scene {
 					text.destroy()
 				}
 			})
+
+			// Create particles if Brause mode is activated
+			if (isBrauseMode) {
+				this.createBrauseParticles()
+			}
 
 			// Reset the key buffer
 			this.keyBuffer = ''
