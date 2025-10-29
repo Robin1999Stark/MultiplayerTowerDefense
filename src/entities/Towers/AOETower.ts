@@ -13,9 +13,11 @@ export class AOETower extends Tower {
         super(scene, x, y, type)
         // Replace the sprite with the common tower1 texture
         this.sprite.destroy()
-        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture('tower_explosive'))
+        const textureKey = 'tower_explosive';
+        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture(textureKey))
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
+        this.applyBrauseColor(this.sprite, textureKey)
 
         // Create a graphics object for the AOE effect (initially invisible)
         this.aoeEffect = scene.add.graphics()

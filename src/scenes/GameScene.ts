@@ -207,16 +207,25 @@ export class GameScene extends Phaser.Scene {
 
 		// Add random background image scaled to game size
 		let bg: Phaser.GameObjects.Image
+		let textureKey: string
 
 		if (this.currentBackgroundType === 'original') {
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background'))
+			textureKey = 'background'
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture(textureKey))
+			this.applyBrauseColor(bg, textureKey)
 		} else if (this.currentBackgroundType === 'beach') {
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background_beach'))
+			textureKey = 'background_beach'
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture(textureKey))
+			this.applyBrauseColor(bg, textureKey)
 		} else if (this.currentBackgroundType === 'ice') {
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background_ice'))
+			textureKey = 'background_ice'
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture(textureKey))
+			this.applyBrauseColor(bg, textureKey)
 		} else {
 			// Fallback to original
-			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture('background'))
+			textureKey = 'background'
+			bg = this.add.image(this.scale.width / 2, this.scale.height / 2, this.getBrauseTexture(textureKey))
+			this.applyBrauseColor(bg, textureKey)
 		}
 
 		bg.setDepth(-10)
@@ -247,7 +256,8 @@ export class GameScene extends Phaser.Scene {
 		});
 
 		// Draw the path using tiled floor sprites
-		const floorTileKey = this.getBrauseTexture('floor_tile')
+		const floorTextureKey = 'floor_tile'
+		const floorTileKey = this.getBrauseTexture(floorTextureKey)
 		const tex = this.textures.get(floorTileKey)
 		const src = tex.getSourceImage() as HTMLImageElement | HTMLCanvasElement | null
 		const tileW = 32
@@ -263,6 +273,7 @@ export class GameScene extends Phaser.Scene {
 			cornerTile.setOrigin(0.5, 0.5)
 			cornerTile.tileScaleX = tileScaleX
 			cornerTile.tileScaleY = tileScaleY
+			this.applyBrauseColor(cornerTile, floorTextureKey)
 
 			// Create a soft edge mask for corner tiles
 			const cornerMaskGfx = this.add.graphics()
@@ -299,6 +310,7 @@ export class GameScene extends Phaser.Scene {
 			stripe.setOrigin(0.5, 0.5)
 			stripe.tileScaleX = tileScaleX
 			stripe.tileScaleY = tileScaleY
+			this.applyBrauseColor(stripe, floorTextureKey)
 			// Create a soft edge mask so the path blends into the background
 			const maskGfx = this.add.graphics()
 			maskGfx.setDepth(-1)
@@ -319,10 +331,12 @@ export class GameScene extends Phaser.Scene {
 		// Add castle at the end of the path
 		if (this.pathPoints.length > 0) {
 			const endPoint = this.pathPoints[this.pathPoints.length - 1]!
-			const castle = this.add.image(endPoint.x - 40, endPoint.y - 43, this.getBrauseTexture('castle'))
+			const castleTextureKey = 'castle'
+			const castle = this.add.image(endPoint.x - 40, endPoint.y - 43, this.getBrauseTexture(castleTextureKey))
 			castle.setScale(0.16) // Scale down the castle to fit the game
 			castle.setOrigin(0.5, 0.5)
 			castle.setDepth(1) // Place castle above path but below towers
+			this.applyBrauseColor(castle, castleTextureKey)
 		}
 
 		// Subscribe to UI toggle for placing towers (deprecated, keeping for backwards compatibility)
@@ -568,11 +582,13 @@ export class GameScene extends Phaser.Scene {
 
 		const cost = tower.getNextUpgrade()?.cost ?? 0;
 
-		const img = this.add.image(0, 0, this.getBrauseTexture('upgrade_arrow'))
+		const upgradeArrowTextureKey = 'upgrade_arrow';
+		const img = this.add.image(0, 0, this.getBrauseTexture(upgradeArrowTextureKey))
 			.setInteractive({ useHandCursor: true })
 			.setDepth(10)
 			.setScale(0.1)
 			.setOrigin(0.5, 1);
+		this.applyBrauseColor(img, upgradeArrowTextureKey);
 
 
 		const priceText = this.add.text(0, 0, `${this.buildLevelText(tower)}: ${cost}`, {
@@ -777,6 +793,7 @@ export class GameScene extends Phaser.Scene {
 		this.ghostTower.setDepth(1)
 		this.ghostTower.setAlpha(0.6)
 		this.ghostTower.setScale(scale)
+		this.applyBrauseColor(this.ghostTower, textureKey)
 
 		// Emit event for UI update
 		this.game.events.emit(GAME_EVENTS.towerTypeSelected, towerType)
@@ -962,6 +979,41 @@ export class GameScene extends Phaser.Scene {
 
 		// If no "_brause" version exists, use the original texture
 		return key;
+	}
+
+	/**
+	 * Apply a random brause color to a game object if it doesn't have a "_brause" texture
+	 * @param gameObject The game object to apply the color to
+	 * @param textureKey The texture key used for the game object
+	 */
+	private applyBrauseColor(gameObject: Phaser.GameObjects.GameObject, textureKey: string): void {
+		// Only apply color in brause mode
+		if (!this.gameConfigService.isBrauseMode()) {
+			return;
+		}
+
+		// Only apply color if there's no "_brause" version of the texture
+		const brauseKey = textureKey + '_brause';
+		if (this.textures.exists(brauseKey)) {
+			return;
+		}
+
+		// Define the brause colors
+		const brauseColors = [
+			0xfcef4f, // Yellow (RGB 252, 239, 79)
+			0x6aa83d, // Green (RGB 106, 168, 61)
+			0xdf7332, // Orange (RGB 223, 115, 50)
+			0xd52e73  // Pink (RGB 213, 46, 115)
+		];
+
+		// Select a random color
+		const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+
+		// Apply the color to the game object
+		if (gameObject instanceof Phaser.GameObjects.Image || 
+			gameObject instanceof Phaser.GameObjects.Sprite) {
+			gameObject.setTint(randomColor);
+		}
 	}
 
 }

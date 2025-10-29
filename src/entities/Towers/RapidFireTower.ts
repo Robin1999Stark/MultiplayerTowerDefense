@@ -12,9 +12,11 @@ export class RapidFireTower extends Tower {
         super(scene, x, y, type)
 
         this.sprite.destroy()
-        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture('tower_rapid'))
+        const textureKey = 'tower_rapid';
+        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture(textureKey))
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
+        this.applyBrauseColor(this.sprite, textureKey)
 
         this.bulletEffect = scene.add.graphics()
         this.bulletEffect.setDepth(3)

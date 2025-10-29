@@ -10,8 +10,10 @@ export class FrostTower extends Tower {
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
 		super(scene, x, y, type)
-		this.sprite.setTexture(this.getBrauseTexture('tower_frost'))
+		const textureKey = 'tower_frost';
+		this.sprite.setTexture(this.getBrauseTexture(textureKey))
 		this.sprite.setScale(0.1)
+		this.applyBrauseColor(this.sprite, textureKey)
         this.slowDownMs = this.getCurrentStats()?.slowDownMs ?? 5000;
         this.slowFactor = this.getCurrentStats()?.slowFactor ?? 0.5;
 	}
@@ -21,13 +23,14 @@ export class FrostTower extends Tower {
 		this.playShootTone()
 
 		// Visual bullet: tweened sprite that slows on arrival
-		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture('arrow'))
+		const bulletTextureKey = 'arrow';
+		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture(bulletTextureKey))
 		bullet.setScale(0.03)
 		bullet.setOrigin(0.5, 0.5)
 		bullet.setDepth(3)
 
 		// Make the bullet blue to indicate frost effect
-		bullet.setTint(0x00aaff)
+		bullet.setTint(0x00aaff) // Frost tower bullets are always blue
 
 		const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
 		const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)

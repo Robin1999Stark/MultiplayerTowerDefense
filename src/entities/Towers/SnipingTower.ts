@@ -12,9 +12,11 @@ export class SnipingTower extends Tower {
         super(scene, x, y, type)
 
         this.sprite.destroy()
-        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture('tower_laser'))
+        const textureKey = 'tower_laser';
+        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture(textureKey))
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
+        this.applyBrauseColor(this.sprite, textureKey)
 
         this.laserEffect = scene.add.graphics()
         this.laserEffect.setDepth(3)

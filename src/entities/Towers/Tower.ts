@@ -32,8 +32,10 @@ export class Tower {
         this.gameConfigService = GameConfigService.getInstance();
 
         // Create sprite with appropriate texture based on brause mode
-        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture('tower_basic'));
+        const textureKey = 'tower_basic';
+        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture(textureKey));
         this.sprite.setDepth(2);
+        this.applyBrauseColor(this.sprite, textureKey);
 
         const levelUpdate = this.getCurrentStats();
 
@@ -97,10 +99,12 @@ export class Tower {
         this.playShootTone()
 
         // Visual bullet: tweened sprite that damages on arrival
-        const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture('arrow'))
+        const bulletTextureKey = 'arrow';
+        const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture(bulletTextureKey))
         bullet.setScale(0.03)
         bullet.setOrigin(0.5, 0.5)
         bullet.setDepth(3)
+        this.applyBrauseColor(bullet, bulletTextureKey)
         const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
         const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)
         bullet.setRotation(angle - Math.PI / 2)
@@ -265,14 +269,39 @@ export class Tower {
 
 	private playDestroyEffect(): void {
 		// Create explosion effect
-		const particles = this.scene.add.particles(this.sprite.x, this.sprite.y, this.getBrauseTexture('bullet'), {
+		const bulletTextureKey = 'bullet';
+		const brauseTextureKey = this.getBrauseTexture(bulletTextureKey);
+
+		// Check if we need to apply a brause color
+		let tint;
+		if (this.gameConfigService.isBrauseMode() && brauseTextureKey === bulletTextureKey) {
+			// Define the brause colors
+			const brauseColors = [
+				0xfcef4f, // Yellow (RGB 252, 239, 79)
+				0x6aa83d, // Green (RGB 106, 168, 61)
+				0xdf7332, // Orange (RGB 223, 115, 50)
+				0xd52e73  // Pink (RGB 213, 46, 115)
+			];
+
+			// Select a random color
+			tint = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+		}
+
+		const particleConfig: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig = {
 			speed: { min: 100, max: 200 },
 			angle: { min: 0, max: 360 },
 			scale: { start: 1, end: 0 },
 			lifespan: 800,
 			blendMode: 'ADD',
 			quantity: 20
-		});
+		};
+
+		// Add tint if needed
+		if (tint) {
+			particleConfig.tint = tint;
+		}
+
+		const particles = this.scene.add.particles(this.sprite.x, this.sprite.y, brauseTextureKey, particleConfig);
 
 		// Fade out the tower
 		this.scene.tweens.add({
@@ -329,5 +358,40 @@ export class Tower {
 
         // If no "_brause" version exists, use the original texture
         return key;
+    }
+
+    /**
+     * Apply a random brause color to a game object if it doesn't have a "_brause" texture
+     * @param gameObject The game object to apply the color to
+     * @param textureKey The texture key used for the game object
+     */
+    protected applyBrauseColor(gameObject: Phaser.GameObjects.GameObject, textureKey: string): void {
+        // Only apply color in brause mode
+        if (!this.gameConfigService.isBrauseMode()) {
+            return;
+        }
+
+        // Only apply color if there's no "_brause" version of the texture
+        const brauseKey = textureKey + '_brause';
+        if (this.scene.textures.exists(brauseKey)) {
+            return;
+        }
+
+        // Define the brause colors
+        const brauseColors = [
+            0xfcef4f, // Yellow (RGB 252, 239, 79)
+            0x6aa83d, // Green (RGB 106, 168, 61)
+            0xdf7332, // Orange (RGB 223, 115, 50)
+            0xd52e73  // Pink (RGB 213, 46, 115)
+        ];
+
+        // Select a random color
+        const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)];
+
+        // Apply the color to the game object
+        if (gameObject instanceof Phaser.GameObjects.Image || 
+            gameObject instanceof Phaser.GameObjects.Sprite) {
+            gameObject.setTint(randomColor);
+        }
     }
 }

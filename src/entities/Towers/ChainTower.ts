@@ -14,9 +14,11 @@ export class ChainTower extends Tower {
 
         this.sprite.destroy()
 
-        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture('tower_rapid_fire'))
+        const textureKey = 'tower_rapid_fire';
+        this.sprite = scene.add.sprite(x, y, this.getBrauseTexture(textureKey))
         this.sprite.setDepth(2)
         this.sprite.setScale(0.1)
+        this.applyBrauseColor(this.sprite, textureKey)
 
         this.bulletEffect = scene.add.graphics()
         this.bulletEffect.setDepth(3)
@@ -61,9 +63,11 @@ export class ChainTower extends Tower {
 
         const scene = this.sprite.scene
 
-        const bullet = scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture('bullet'))
-        bullet.setTint(0x9966ff)
+        const bulletTextureKey = 'bullet';
+        const bullet = scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture(bulletTextureKey))
+        bullet.setTint(0x9966ff) // Chain tower bullets are always purple
         bullet.setDepth(3)
+        // Note: We don't apply brause color here because we want chain tower bullets to always be purple
 
         const distance = Phaser.Math.Distance.Between(
             this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y
