@@ -718,7 +718,12 @@ export class GameScene extends Phaser.Scene {
 
 		if (!clickedTower.canUpgrade()) {
 			clickedTower.sprite.setTint(0xff8888)
-			this.time.delayedCall(180, () => clickedTower.sprite.clearTint())
+			this.time.delayedCall(180, () => {
+				clickedTower.sprite.clearTint()
+				// Reapply Brause color after the effect
+				const textureKey = `tower_${clickedTower.type.id}`;
+				this.applyBrauseColor(clickedTower.sprite, textureKey);
+			})
 			return
 		}
 
@@ -726,7 +731,12 @@ export class GameScene extends Phaser.Scene {
 		if (this.gold < upgradeCost) {
 			// optional: feedback (flash red)
 			clickedTower.sprite.setTint(0xff0000)
-			this.time.delayedCall(220, () => clickedTower.sprite.clearTint())
+			this.time.delayedCall(220, () => {
+				clickedTower.sprite.clearTint()
+				// Reapply Brause color after the effect
+				const textureKey = `tower_${clickedTower.type.id}`;
+				this.applyBrauseColor(clickedTower.sprite, textureKey);
+			})
 			return
 		}
 

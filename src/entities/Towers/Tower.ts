@@ -237,6 +237,9 @@ export class Tower {
 		this.sprite.setTintFill(0xffff99)
 		this.scene.time.delayedCall(220, () => {
 			this.sprite.clearTint()
+			// Reapply Brause color after the upgrade effect
+			const textureKey = `tower_${this.type.id}`;
+			this.applyBrauseColor(this.sprite, textureKey);
 		})
 	}
 
@@ -245,10 +248,13 @@ export class Tower {
 
         this.updateHPDisplay();
 
-		// Visual feedback for damage
+ 	// Visual feedback for damage
 		this.sprite.setTintFill(0xff0000); // Red tint
 		this.scene.time.delayedCall(100, () => {
 			this.sprite.clearTint();
+			// Reapply Brause color after the damage effect
+			const textureKey = `tower_${this.type.id}`;
+			this.applyBrauseColor(this.sprite, textureKey);
 		});
 
 		// Check if tower is destroyed
