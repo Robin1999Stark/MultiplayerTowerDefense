@@ -44,6 +44,8 @@ export class GameScene extends Phaser.Scene {
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
 	private hoveredTower: Tower | null = null
+	private isPaused = false
+	private pauseOverlay?: Phaser.GameObjects.Container
 
 	// Camera properties
 	private currentZoom = 1
@@ -156,6 +158,13 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	create(): void {
+		// Reset pause state when starting/restarting the game
+		this.isPaused = false
+		if (this.pauseOverlay) {
+			this.pauseOverlay.destroy()
+			delete this.pauseOverlay
+		}
+
 		this.cameras.main.setBackgroundColor('#0b1020')
 
 		// Unlock audio on first user interaction (required by browsers)
@@ -194,6 +203,11 @@ export class GameScene extends Phaser.Scene {
 
 		// Start playing background music
 		this.audioManager.startMusic()
+
+		// Add 'P' key listener to toggle pause
+		this.input.keyboard.on('keydown-P', () => {
+			this.togglePause()
+		})
 
 		// Add arrow key listeners for camera movement
 		this.input.keyboard.on('keydown-UP', () => {
@@ -375,6 +389,9 @@ export class GameScene extends Phaser.Scene {
 
 		// Keyboard input for tower and event selection
 		this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+			// Don't process tower/event selection when paused
+			if (this.isPaused) return;
+
 			const towerType = this.towerStore.getTowerTypeByKey(event.key)
 			const eventType = this.eventStore.getEventByKey(event.key)
 
@@ -397,6 +414,9 @@ export class GameScene extends Phaser.Scene {
 
 		// Mouse movement for ghost tower preview and tower hover detection
 		this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+			// Don't process game interactions when paused
+			if (this.isPaused) return;
+
 			// Check for tower hover
 			const towerUnderCursor = this.findTowerAt(pointer.worldX, pointer.worldY)
 			this.setHoveredTower(towerUnderCursor)
@@ -431,6 +451,8 @@ export class GameScene extends Phaser.Scene {
 
 		// Input to place a tower or activate an event
 		this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+			// Don't process game interactions when paused
+			if (this.isPaused) return;
 
 			const clickedTower = this.findTowerAt(pointer.worldX, pointer.worldY)
 			if (clickedTower) {
@@ -476,6 +498,11 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	override update(time: number, delta: number): void {
+		// Don't update game logic when paused
+		if (this.isPaused) {
+			return;
+		}
+
 		// Update enemies and get results
 		const { goldEarned, livesLost } = this.waveFactory.update(delta);
 
@@ -1123,6 +1150,198 @@ export class GameScene extends Phaser.Scene {
 			gameObject instanceof Phaser.GameObjects.TileSprite) {
 			gameObject.setTint(colorToApply);
 		}
+	}
+
+	/**
+	 * Toggle the pause state of the game
+	 */
+	private togglePause(): void {
+		if (this.isPaused) {
+			this.resumeGame()
+		} else {
+			this.pauseGame()
+		}
+	}
+
+	/**
+	 * Pause the game and show the pause overlay
+	 */
+	private pauseGame(): void {
+		this.isPaused = true
+		this.physics.pause()
+		this.createPauseOverlay()
+	}
+
+	/**
+	 * Resume the game and hide the pause overlay
+	 */
+	private resumeGame(): void {
+		this.isPaused = false
+		this.physics.resume()
+		if (this.pauseOverlay) {
+			this.pauseOverlay.destroy()
+			delete this.pauseOverlay
+		}
+	}
+
+	/**
+	 * Create the pause overlay with buttons
+	 */
+	private createPauseOverlay(): void {
+		const centerX = this.scale.width / 2
+		const centerY = this.scale.height / 2
+
+		// Container for all pause UI elements
+		this.pauseOverlay = this.add.container(0, 0)
+		this.pauseOverlay.setDepth(10000)
+
+		// Semi-transparent background
+		const background = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.7)
+		background.setOrigin(0, 0)
+		this.pauseOverlay.add(background)
+
+		// Pause sheet/panel
+		const panelWidth = 400
+		const panelHeight = 300
+		const panel = this.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x1a1a2e, 0.95)
+		panel.setStrokeStyle(3, 0x00d4ff)
+		this.pauseOverlay.add(panel)
+
+		// "Pause" text
+		const pauseText = this.add.text(centerX, centerY - 80, 'Pause', {
+			fontSize: '64px',
+			color: '#00d4ff',
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			stroke: '#000000',
+			strokeThickness: 6,
+			resolution: 2
+		})
+		pauseText.setOrigin(0.5)
+		this.pauseOverlay.add(pauseText)
+
+		// Button dimensions
+		const buttonWidth = 280
+		const buttonHeight = 60
+		const buttonSpacing = 20
+
+		// "Back to menu" button
+		const menuButtonY = centerY + 20
+		const menuButtonBg = this.add.rectangle(centerX, menuButtonY, buttonWidth, buttonHeight, 0xff4757, 0.3)
+		menuButtonBg.setStrokeStyle(2, 0xff4757)
+		menuButtonBg.setInteractive({ useHandCursor: true })
+		this.pauseOverlay.add(menuButtonBg)
+
+		const menuButtonText = this.add.text(centerX, menuButtonY, 'Back to menu', {
+			fontSize: '28px',
+			color: '#ff4757',
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
+		})
+		menuButtonText.setOrigin(0.5)
+		this.pauseOverlay.add(menuButtonText)
+
+		// "Heiter weiter" button
+		const continueButtonY = menuButtonY + buttonHeight + buttonSpacing
+		const continueButtonBg = this.add.rectangle(centerX, continueButtonY, buttonWidth, buttonHeight, 0x00ff88, 0.3)
+		continueButtonBg.setStrokeStyle(2, 0x00ff88)
+		continueButtonBg.setInteractive({ useHandCursor: true })
+		this.pauseOverlay.add(continueButtonBg)
+
+		const continueButtonText = this.add.text(centerX, continueButtonY, 'Heiter weiter', {
+			fontSize: '28px',
+			color: '#00ff88',
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
+		})
+		continueButtonText.setOrigin(0.5)
+		this.pauseOverlay.add(continueButtonText)
+
+		// Button hover effects for "Back to menu"
+		menuButtonBg.on('pointerover', () => {
+			menuButtonBg.setFillStyle(0xff4757, 0.6)
+			menuButtonText.setColor('#ffffff')
+			this.tweens.add({
+				targets: [menuButtonBg, menuButtonText],
+				scale: 1.05,
+				duration: 200,
+				ease: 'Power2'
+			})
+		})
+
+		menuButtonBg.on('pointerout', () => {
+			menuButtonBg.setFillStyle(0xff4757, 0.3)
+			menuButtonText.setColor('#ff4757')
+			this.tweens.add({
+				targets: [menuButtonBg, menuButtonText],
+				scale: 1,
+				duration: 200,
+				ease: 'Power2'
+			})
+		})
+
+		// Button hover effects for "Heiter weiter"
+		continueButtonBg.on('pointerover', () => {
+			continueButtonBg.setFillStyle(0x00ff88, 0.6)
+			continueButtonText.setColor('#ffffff')
+			this.tweens.add({
+				targets: [continueButtonBg, continueButtonText],
+				scale: 1.05,
+				duration: 200,
+				ease: 'Power2'
+			})
+		})
+
+		continueButtonBg.on('pointerout', () => {
+			continueButtonBg.setFillStyle(0x00ff88, 0.3)
+			continueButtonText.setColor('#00ff88')
+			this.tweens.add({
+				targets: [continueButtonBg, continueButtonText],
+				scale: 1,
+				duration: 200,
+				ease: 'Power2'
+			})
+		})
+
+		// Button click handlers
+		menuButtonBg.on('pointerdown', () => {
+			this.goBackToMenu()
+		})
+
+		continueButtonBg.on('pointerdown', () => {
+			this.resumeGame()
+		})
+
+		// Add a subtle pulsing animation to the pause text
+		this.tweens.add({
+			targets: pauseText,
+			alpha: 0.7,
+			duration: 1000,
+			yoyo: true,
+			repeat: -1,
+			ease: 'Sine.easeInOut'
+		})
+	}
+
+	/**
+	 * Go back to the main menu
+	 */
+	private goBackToMenu(): void {
+		// Clean up pause overlay
+		if (this.pauseOverlay) {
+			this.pauseOverlay.destroy()
+			delete this.pauseOverlay
+		}
+
+		// Stop all game scenes
+		this.scene.stop('GameScene')
+		this.scene.stop('UIScene')
+		this.scene.stop('StatisticsScene')
+
+		// Start the menu scene
+		this.scene.start('StartScene')
 	}
 
 }
