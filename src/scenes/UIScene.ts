@@ -32,47 +32,73 @@ export class UIScene extends Phaser.Scene {
 
 	preload(): void {
 		// Load tower images for UI display
+	if (!this.textures.exists('tower_basic')) {
 		this.load.image('tower_basic', 'assets/towers/tower_basic.png')
+	}
+	if (!this.textures.exists('tower_laser')) {
 		this.load.image('tower_laser', 'assets/towers/tower_laser.png')
+	}
+	if (!this.textures.exists('tower_rapid')) {
 		this.load.image('tower_rapid', 'assets/towers/tower_rapid.png')
+	}
+	if (!this.textures.exists('tower_rapid_fire')) {
 		this.load.image('tower_rapid_fire', 'assets/towers/tower_rapid_fire.png')
+	}
+	if (!this.textures.exists('tower_explosive')) {
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
+	}
+	if (!this.textures.exists('tower_frost')) {
 		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
+	}
 
-		// Load effect icons
+	// Load effect icons
+	if (!this.textures.exists('effect_freezing')) {
 		this.load.image('effect_freezing', 'assets/effects/freeze_effect_icon.jpeg')
+	}
+	if (!this.textures.exists('effect_area_damage')) {
 		this.load.image('effect_area_damage', 'assets/effects/area_damage_effect_icon.jpeg')
+	}
+	if (!this.textures.exists('effect_gold_rush')) {
 		this.load.image('effect_gold_rush', 'assets/effects/gold_rush_effect_icon.jpeg')
+	}
 
-		// Create event icon (fallback)
-		const g = this.add.graphics()
+	// Create event icon (fallback)
+	const g = this.add.graphics()
 
+	if (!this.textures.exists('event_slow')) {
 		g.clear()
 		g.fillStyle(0x00aaff, 1)
 		g.fillRoundedRect(0, 0, 32, 32, 8)
 		g.generateTexture('event_slow', 32, 32)
+	}
 
         // Create area damage event icon
-        g.clear()
-        g.fillStyle(0xff0000, 1)
-        g.fillCircle(16, 16, 16)
-        g.lineStyle(2, 0xffff00, 1)
-        g.strokeCircle(16, 16, 12)
-        g.generateTexture('event_area_damage', 32, 32)
+	if (!this.textures.exists('event_area_damage')) {
+		g.clear()
+		g.fillStyle(0xff0000, 1)
+		g.fillCircle(16, 16, 16)
+		g.lineStyle(2, 0xffff00, 1)
+		g.strokeCircle(16, 16, 12)
+		g.generateTexture('event_area_damage', 32, 32)
+	}
 
-        g.clear()
-        g.fillStyle(0x00aaff, 1)
-        g.fillRoundedRect(0, 0, 32, 32, 8)
-        g.generateTexture('event_gold_rush', 32, 32)
+	if (!this.textures.exists('event_gold_rush')) {
+		g.clear()
+		g.fillStyle(0x00aaff, 1)
+		g.fillRoundedRect(0, 0, 32, 32, 8)
+		g.generateTexture('event_gold_rush', 32, 32)
+	}
 
-		// Create coin icon for costs
+	// Create coin icon for costs
+	if (!this.textures.exists('coin_icon')) {
 		g.clear()
 		g.fillStyle(0xffd700, 1) // Gold color
 		g.fillCircle(8, 8, 8)    // Coin circle
 		g.lineStyle(1, 0xffff00, 1)
 		g.strokeCircle(8, 8, 8)  // Coin outline
 		g.generateTexture('coin_icon', 16, 16)
-		g.destroy()
+	}
+	g.destroy()
 	}
 
 	create(): void {
