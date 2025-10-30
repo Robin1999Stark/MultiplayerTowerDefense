@@ -640,30 +640,23 @@ export class GameScene extends Phaser.Scene {
 	private createDeleteButton(tower: Tower): void {
 		if (this.deleteButtons.has(tower)) return
 
-		// Create red "X" text
+		// Create red "X" text (no background or border)
 		const deleteText = this.add.text(0, 0, 'X', {
 			fontFamily: 'Arial, sans-serif',
-			fontSize: '16px',
+			fontSize: '20px',
 			color: '#ff0000',
-			stroke: '#ffffff',
-			strokeThickness: 2,
+			stroke: '#000000',
+			strokeThickness: 3,
 			resolution: 2
 		})
 		.setInteractive({ useHandCursor: true })
 		.setOrigin(0.5, 0.5)
 		.setDepth(10);
 
-		// Create background circle for the X button
-		const bg = this.add.graphics();
-		bg.fillStyle(0x000000, 0.7);
-		bg.fillCircle(0, 0, 12);
-		bg.lineStyle(2, 0xff0000, 1);
-		bg.strokeCircle(0, 0, 12);
-
 		const container = this.add.container(
 			tower.sprite.x,
 			tower.sprite.y + ((tower.sprite.displayHeight) / 2 + 10),
-			[bg, deleteText]
+			[deleteText]
 		).setDepth(10).setVisible(false); // Hidden by default
 
 		deleteText.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
@@ -673,7 +666,7 @@ export class GameScene extends Phaser.Scene {
 
 		// Add hover effect
 		deleteText.on('pointerover', () => {
-			deleteText.setScale(1.2);
+			deleteText.setScale(1.3);
 		});
 
 		deleteText.on('pointerout', () => {
