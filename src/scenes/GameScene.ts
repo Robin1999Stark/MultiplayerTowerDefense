@@ -1031,11 +1031,6 @@ export class GameScene extends Phaser.Scene {
 			return
 		}
 
-		// Hide delete and upgrade buttons when entering build mode
-		if (this.selectedTower) {
-			this.deselectTower()
-		}
-
 		this.selectedTowerType = towerType
 		this.input.setDefaultCursor('crosshair')
 
