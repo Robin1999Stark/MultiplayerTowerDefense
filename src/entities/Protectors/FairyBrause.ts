@@ -202,9 +202,12 @@ export class FairyBrause {
         // Apply dizzy effect to enemy
         if (
             'applyDizzy' in enemy &&
-            typeof (enemy as any).applyDizzy === 'function'
+            typeof (enemy as { applyDizzy?: (duration: number) => void })
+                .applyDizzy === 'function'
         ) {
-            (enemy as any).applyDizzy(5000); // Dizzy for 5 seconds
+            (enemy as { applyDizzy: (duration: number) => void }).applyDizzy(
+                5000
+            ); // Dizzy for 5 seconds
         }
     }
 

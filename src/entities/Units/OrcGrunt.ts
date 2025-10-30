@@ -102,7 +102,7 @@ export class OrcGrunt implements Enemy {
             this.reachedEnd = true;
             return;
         }
-        let dir = target.clone().subtract(pos);
+        const dir = target.clone().subtract(pos);
         const distance = dir.length();
         if (distance < this.speed * dt) {
             if (this.isConfused) {

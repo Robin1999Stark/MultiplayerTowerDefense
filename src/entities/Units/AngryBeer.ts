@@ -54,7 +54,7 @@ export class AngryBeer extends OrcGrunt {
      */
     private findNearestTower(gameScene: GameScene): Tower | null {
         // Access the towers array from GameScene
-        const towers = (gameScene as any).towers as Tower[];
+        const towers = (gameScene as unknown as { towers: Tower[] }).towers;
 
         if (!towers || towers.length === 0) {
             return null;
@@ -145,7 +145,7 @@ export class AngryBeer extends OrcGrunt {
      * Override applySlow to make AngryBeer heal when hit by frost tower
      * Instead of being slowed, the AngryBeer heals from the frost effect
      */
-    override applySlow(durationMs: number, slowFactor: number = 0.5): void {
+    override applySlow(durationMs: number, _slowFactor: number = 0.5): void {
         // AngryBeer heals from frost effects instead of being slowed
         const healAmount = 100; // Heal 100 HP per frost hit (increased from 50)
         this.heal(healAmount);
@@ -163,7 +163,7 @@ export class AngryBeer extends OrcGrunt {
      * Heal the AngryBeer by a certain amount (capped at maxHp)
      */
     private heal(amount: number): void {
-        const maxHp = (this as any).maxHp as number;
+        const maxHp = (this as unknown as { maxHp: number }).maxHp;
         this.hp = Math.min(this.hp + amount, maxHp);
         this.updateHealthBarPublic();
     }
@@ -174,7 +174,7 @@ export class AngryBeer extends OrcGrunt {
     private updateHealthBarPublic(): void {
         // Call the parent's updateHealthBar through reflection
         // Since updateHealthBar is private in parent, we need to access it differently
-        (this as any).updateHealthBar();
+        (this as unknown as { updateHealthBar: () => void }).updateHealthBar();
     }
 
     /**
@@ -182,7 +182,9 @@ export class AngryBeer extends OrcGrunt {
      */
     private applyBrauseColorPublic(): void {
         // Call the parent's applyBrauseColor through reflection
-        (this as any).applyBrauseColor();
+        (
+            this as unknown as { applyBrauseColor: () => void }
+        ).applyBrauseColor();
     }
 
     static override spawn(scene: Phaser.Scene, wave: number): Enemy {
