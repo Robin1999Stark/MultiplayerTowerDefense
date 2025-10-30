@@ -379,7 +379,6 @@ export class Tower {
         // Destroy HP text if it exists
         if (this.hpText) {
             this.hpText.destroy();
-            this.hpText = undefined;
         }
 
         // Destroy the sprite
