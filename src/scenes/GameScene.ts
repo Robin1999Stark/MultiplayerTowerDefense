@@ -42,6 +42,8 @@ export class GameScene extends Phaser.Scene {
 	private currentBackgroundType!: string
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
+	private deleteButtons: Map<Tower, Phaser.GameObjects.Container> = new Map()
+	private selectedTowerForButtons: Tower | null = null
 
 	// Camera properties
 	private currentZoom = 1
@@ -401,7 +403,14 @@ export class GameScene extends Phaser.Scene {
 
 			const clickedTower = this.findTowerAt(pointer.worldX, pointer.worldY)
 			if (clickedTower) {
+				// Tower click is handled by the tower's own pointerdown event
 				return
+			}
+
+			// Hide buttons from previously selected tower when clicking elsewhere
+			if (this.selectedTowerForButtons) {
+				this.hideTowerButtons(this.selectedTowerForButtons)
+				this.selectedTowerForButtons = null
 			}
 
 			// If an event is selected, activate it
@@ -430,6 +439,8 @@ export class GameScene extends Phaser.Scene {
 			this.game.events.emit(GAME_EVENTS.towerBuilt)
 
 			this.createUpgradeIndicator(tower)
+			this.createDeleteButton(tower)
+			this.setupTowerHoverEffect(tower)
 		})
 
 
@@ -482,6 +493,7 @@ export class GameScene extends Phaser.Scene {
 		// Sort towers by Y position for proper depth ordering
 		this.sortTowersByDepth();
 		this.updateUpgradeIndicators();
+		this.updateDeleteButtons();
 	}
 
 	// Method to check if a specific event type is active
@@ -610,7 +622,7 @@ export class GameScene extends Phaser.Scene {
 			tower.sprite.x,
 			tower.sprite.y - ((tower.sprite.displayHeight) / 2 - 16),
 			[img, priceText]
-		).setDepth(10)
+		).setDepth(10).setVisible(false) // Hidden by default
 
 		const arrowH = img.displayHeight
 		const arrowW = img.displayWidth
@@ -625,6 +637,137 @@ export class GameScene extends Phaser.Scene {
 		this.upgradeIndicators.set(tower, container)
 	}
 
+	private createDeleteButton(tower: Tower): void {
+		if (this.deleteButtons.has(tower)) return
+
+		// Create red "X" text
+		const deleteText = this.add.text(0, 0, 'X', {
+			fontFamily: 'Arial, sans-serif',
+			fontSize: '16px',
+			color: '#ff0000',
+			stroke: '#ffffff',
+			strokeThickness: 2,
+			resolution: 2
+		})
+		.setInteractive({ useHandCursor: true })
+		.setOrigin(0.5, 0.5)
+		.setDepth(10);
+
+		// Create background circle for the X button
+		const bg = this.add.graphics();
+		bg.fillStyle(0x000000, 0.7);
+		bg.fillCircle(0, 0, 12);
+		bg.lineStyle(2, 0xff0000, 1);
+		bg.strokeCircle(0, 0, 12);
+
+		const container = this.add.container(
+			tower.sprite.x,
+			tower.sprite.y + ((tower.sprite.displayHeight) / 2 + 10),
+			[bg, deleteText]
+		).setDepth(10).setVisible(false); // Hidden by default
+
+		deleteText.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+			if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+			this.deleteTower(tower);
+		});
+
+		// Add hover effect
+		deleteText.on('pointerover', () => {
+			deleteText.setScale(1.2);
+		});
+
+		deleteText.on('pointerout', () => {
+			deleteText.setScale(1.0);
+		});
+
+		this.deleteButtons.set(tower, container);
+	}
+
+	private removeDeleteButton(tower: Tower): void {
+		const container = this.deleteButtons.get(tower);
+		if (!container) return;
+
+		const deleteText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined;
+		if (deleteText) {
+			deleteText.off('pointerdown');
+			deleteText.off('pointerover');
+			deleteText.off('pointerout');
+		}
+		container.destroy();
+		this.deleteButtons.delete(tower);
+	}
+
+	private deleteTower(tower: Tower): void {
+		// Remove upgrade indicator and delete button
+		this.removeUpgradeIndicator(tower);
+		this.removeDeleteButton(tower);
+
+		// Clear selected tower if this was it
+		if (this.selectedTowerForButtons === tower) {
+			this.selectedTowerForButtons = null;
+		}
+
+		// Remove from towers array
+		const index = this.towers.indexOf(tower);
+		if (index !== -1) {
+			this.towers.splice(index, 1);
+		}
+
+		// Refund 50% of the tower's total cost
+		const totalCost = this.calculateTowerTotalCost(tower);
+		const refund = Math.floor(totalCost * 0.5);
+		this.gold += refund;
+		this.emitGold();
+
+		// Show deletion message with refund
+		const text = this.add.text(
+			tower.sprite.x,
+			tower.sprite.y - 30,
+			`Tower Sold!\n+${refund} gold`,
+			{
+				fontFamily: 'Arial, sans-serif',
+				fontSize: '16px',
+				color: '#ffff00',
+				stroke: '#000000',
+				strokeThickness: 3,
+				align: 'center',
+				resolution: 2
+			}
+		);
+		text.setOrigin(0.5);
+		text.setDepth(100);
+
+		// Fade out and remove the message
+		this.tweens.add({
+			targets: text,
+			alpha: 0,
+			y: text.y - 20,
+			duration: 1500,
+			ease: 'Power2',
+			onComplete: () => {
+				text.destroy();
+			}
+		});
+
+		// Clean up event listeners
+		tower.sprite.off('pointerdown');
+		
+		// Destroy tower sprite and effects
+		tower.sprite.destroy();
+	}
+
+	private calculateTowerTotalCost(tower: Tower): number {
+		// Calculate the total cost spent on this tower (base + all upgrades)
+		let totalCost = 0;
+		for (let level = 1; level <= tower.getLevel(); level++) {
+			const upgrade = tower.type.levels.get(level);
+			if (upgrade) {
+				totalCost += upgrade.cost;
+			}
+		}
+		return totalCost;
+	}
+
 	private removeUpgradeIndicator(tower: Tower): void {
 		const container = this.upgradeIndicators.get(tower)
 		if (!container) return
@@ -636,12 +779,18 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	/**
-	 * Removes a tower from the game
+	 * Removes a tower from the game (when destroyed by enemies)
 	 * @param tower The tower to remove
 	 */
 	private removeTower(tower: Tower): void {
-		// Remove upgrade indicator if it exists
+		// Remove upgrade indicator and delete button if they exist
 		this.removeUpgradeIndicator(tower);
+		this.removeDeleteButton(tower);
+
+		// Clear selected tower if this was it
+		if (this.selectedTowerForButtons === tower) {
+			this.selectedTowerForButtons = null;
+		}
 
 		// Remove from towers array
 		const index = this.towers.indexOf(tower);
@@ -677,6 +826,9 @@ export class GameScene extends Phaser.Scene {
 				text.destroy();
 			}
 		});
+
+		// Clean up event listeners
+		tower.sprite.off('pointerdown');
 	}
 
 	private updateUpgradeIndicators(): void {
@@ -686,6 +838,10 @@ export class GameScene extends Phaser.Scene {
 			const can = tower.canUpgrade()
 			if (can && !has) {
 				this.createUpgradeIndicator(tower)
+				// Also ensure hover effect is set up
+				if (!tower.sprite.input) {
+					this.setupTowerHoverEffect(tower);
+				}
 			} else if (!can && has) {
 				this.removeUpgradeIndicator(tower)
 			}
@@ -715,6 +871,81 @@ export class GameScene extends Phaser.Scene {
 					if (priceText) priceText.setStyle({ color: '#ff6666' })
 				}
 			}
+		}
+	}
+
+	private updateDeleteButtons(): void {
+		// Ensure delete buttons exist for all towers
+		for (const tower of this.towers) {
+			if (!this.deleteButtons.has(tower)) {
+				this.createDeleteButton(tower);
+				// Also ensure hover effect is set up
+				if (!tower.sprite.input) {
+					this.setupTowerHoverEffect(tower);
+				}
+			}
+		}
+
+		// Update delete button positions to follow towers
+		for (const [tower, container] of this.deleteButtons.entries()) {
+			if (!tower || !container) continue;
+
+			container.x = tower.sprite.x;
+			container.y = tower.sprite.y + ((tower.sprite.displayHeight) / 2 + 10);
+		}
+	}
+
+	private setupTowerHoverEffect(tower: Tower): void {
+		// Make tower sprite interactive
+		tower.sprite.setInteractive({ useHandCursor: true });
+
+		// Toggle upgrade and delete buttons on click
+		tower.sprite.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+			// Don't allow clicking towers when in build mode
+			if (this.selectedTowerType) {
+				return;
+			}
+
+			if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+			
+			// If this tower is already selected, deselect it
+			if (this.selectedTowerForButtons === tower) {
+				this.hideTowerButtons(tower);
+				this.selectedTowerForButtons = null;
+			} else {
+				// Hide buttons from previously selected tower
+				if (this.selectedTowerForButtons) {
+					this.hideTowerButtons(this.selectedTowerForButtons);
+				}
+				
+				// Show buttons for this tower
+				this.showTowerButtons(tower);
+				this.selectedTowerForButtons = tower;
+			}
+		});
+	}
+
+	private showTowerButtons(tower: Tower): void {
+		const upgradeContainer = this.upgradeIndicators.get(tower);
+		if (upgradeContainer) {
+			upgradeContainer.setVisible(true);
+		}
+
+		const deleteContainer = this.deleteButtons.get(tower);
+		if (deleteContainer) {
+			deleteContainer.setVisible(true);
+		}
+	}
+
+	private hideTowerButtons(tower: Tower): void {
+		const upgradeContainer = this.upgradeIndicators.get(tower);
+		if (upgradeContainer) {
+			upgradeContainer.setVisible(false);
+		}
+
+		const deleteContainer = this.deleteButtons.get(tower);
+		if (deleteContainer) {
+			deleteContainer.setVisible(false);
 		}
 	}
 
