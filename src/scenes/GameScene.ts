@@ -94,6 +94,7 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
 		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
 		this.load.image('arrow', 'assets/projectiles/arrow.png')
+		this.load.audio('arrow_shoot', 'assets/sound/effects/arrow.mp3')
 		this.load.image('background', 'assets/background.jpeg')
 		this.load.image('background_brause', 'assets/backgrounds/meadow_brause.jpeg')
 		this.load.image('background_beach', 'assets/backgrounds/beach.jpeg')
@@ -149,6 +150,13 @@ export class GameScene extends Phaser.Scene {
 
 	create(): void {
 		this.cameras.main.setBackgroundColor('#0b1020')
+
+		// Unlock audio on first user interaction (required by browsers)
+		this.input.once('pointerdown', () => {
+			if (this.sound.context && this.sound.context.state === 'suspended') {
+				this.sound.context.resume()
+			}
+		})
 
 		// Add keyboard event listeners if keyboard input is available
 		if (this.input.keyboard) {

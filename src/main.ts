@@ -29,6 +29,9 @@ const config: Phaser.Types.Core.GameConfig = {
 			debug: false
 		},
 	},
+	audio: {
+		disableWebAudio: false
+	},
 	scene: [StartScene, ControlsScene, GameScene, StatisticsScene, UIScene]
 }
 

@@ -52,26 +52,8 @@ export class FrostTower extends Tower {
 		// Don't play sound if muted
 		if (this.audioManager.isMuted()) return
 
-		const audioCtx = this.getAudioContext()
-		if (!audioCtx) return
-
-		const durationSec = 0.15
-		const oscillator = audioCtx.createOscillator()
-		const gainNode = audioCtx.createGain()
-		oscillator.type = 'sine'
-		oscillator.frequency.setValueAtTime(150, audioCtx.currentTime)
-		oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + durationSec)
-		gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime)
-		gainNode.gain.exponentialRampToValueAtTime(0.08, audioCtx.currentTime + 0.005)
-		gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durationSec)
-		oscillator.connect(gainNode)
-		gainNode.connect(audioCtx.destination)
-		oscillator.start()
-		oscillator.stop(audioCtx.currentTime + durationSec)
-		oscillator.onended = () => {
-			oscillator.disconnect()
-			gainNode.disconnect()
-		}
+		// Play the arrow shoot sound effect with a lower pitch for frost effect
+		this.scene.sound.play('arrow_shoot', { volume: 0.75, rate: 0.8 })
 	}
 
     protected override upgradeStats(upgrade: TowerLevelUpgrade): void {
