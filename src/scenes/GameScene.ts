@@ -1021,8 +1021,8 @@ export class GameScene extends Phaser.Scene {
             },
         });
 
-        // Destroy tower sprite and effects
-        tower.sprite.destroy();
+        // Destroy tower (including sprite and HP display)
+        tower.destroy();
     }
 
     private calculateTowerTotalCost(tower: Tower): number {
@@ -1050,6 +1050,11 @@ export class GameScene extends Phaser.Scene {
         if (this.hoveredTower === tower) {
             this.hoveredTower = null;
         }
+
+		// Hide delete and upgrade buttons when entering build mode
+		if (this.selectedTower) {
+			this.deselectTower()
+		}
 
         // Clear selected state if this was the selected tower
         if (this.selectedTower === tower) {
@@ -1090,6 +1095,9 @@ export class GameScene extends Phaser.Scene {
                 text.destroy();
             },
         });
+
+        // Destroy tower (including sprite and HP display)
+        tower.destroy();
     }
 
     private setHoveredTower(tower: Tower | undefined): void {

@@ -22,19 +22,19 @@ export class FrostTower extends Tower {
 		// Audio blip for the shot
 		this.playShootTone()
 
-		// Visual bullet: tweened sprite that slows on arrival
-		const bulletTextureKey = 'arrow';
+		// Visual snowball: circular sprite that slows on arrival
+		const bulletTextureKey = 'bullet'; // Use circular bullet texture for snowball
 		const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture(bulletTextureKey))
-		bullet.setScale(0.03)
+		bullet.setScale(1.5) // Larger than regular bullets to look like snowballs
 		bullet.setOrigin(0.5, 0.5)
 		bullet.setDepth(3)
 
-		// Make the bullet blue to indicate frost effect
-		bullet.setTint(0x00aaff) // Frost tower bullets are always blue
+		// Make the snowball white/light blue
+		bullet.setTint(0xeeffff) // Very light blue/white for snowball effect
 
 		const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
-		const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)
-		bullet.setRotation(angle - Math.PI / 2)
+		
+		// No rotation needed for snowballs (they're circular)
 
 		this.scene.tweens.add({
 			targets: bullet,

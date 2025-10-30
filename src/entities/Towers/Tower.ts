@@ -466,4 +466,19 @@ export class Tower {
             gameObject.setTint(randomColor);
         }
     }
+
+    /**
+     * Destroys the tower and cleans up all its resources (HP text, sprite, etc.)
+     */
+    public destroy(): void {
+        // Destroy HP text if it exists
+        if (this.hpText) {
+            this.hpText.destroy();
+        }
+
+        // Destroy the sprite
+        if (this.sprite) {
+            this.sprite.destroy();
+        }
+    }
 }
