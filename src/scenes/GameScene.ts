@@ -42,6 +42,7 @@ export class GameScene extends Phaser.Scene {
 	private currentBackgroundType!: string
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
+	private hoveredTower: Tower | null = null
 
 	// Camera properties
 	private currentZoom = 1
@@ -380,8 +381,11 @@ export class GameScene extends Phaser.Scene {
 			}
 		})
 
-		// Mouse movement for ghost tower preview
+		// Mouse movement for ghost tower preview and tower hover detection
 		this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+			// Check for tower hover
+			const towerUnderCursor = this.findTowerAt(pointer.worldX, pointer.worldY)
+			this.setHoveredTower(towerUnderCursor)
 
 			if (this.ghostTower && this.selectedTowerType) {
 				const position = this.snapToGrid(pointer.worldX, pointer.worldY)
@@ -610,7 +614,7 @@ export class GameScene extends Phaser.Scene {
 			tower.sprite.x,
 			tower.sprite.y - ((tower.sprite.displayHeight) / 2 - 16),
 			[img, priceText]
-		).setDepth(10)
+		).setDepth(10).setVisible(false) // Initially hidden
 
 		const arrowH = img.displayHeight
 		const arrowW = img.displayWidth
@@ -633,6 +637,11 @@ export class GameScene extends Phaser.Scene {
 		if (arrow) arrow.off('pointerdown')
 		container.destroy()
 		this.upgradeIndicators.delete(tower)
+		
+		// If this was the hovered tower, clear the hover state
+		if (this.hoveredTower === tower) {
+			this.hoveredTower = null
+		}
 	}
 
 	/**
@@ -642,6 +651,11 @@ export class GameScene extends Phaser.Scene {
 	private removeTower(tower: Tower): void {
 		// Remove upgrade indicator if it exists
 		this.removeUpgradeIndicator(tower);
+
+		// Clear hover state if this was the hovered tower
+		if (this.hoveredTower === tower) {
+			this.hoveredTower = null;
+		}
 
 		// Remove from towers array
 		const index = this.towers.indexOf(tower);
@@ -679,40 +693,69 @@ export class GameScene extends Phaser.Scene {
 		});
 	}
 
-	private updateUpgradeIndicators(): void {
-		// ensure indicators exist only for upgradable towers
-		for (const tower of this.towers) {
-			const has = this.upgradeIndicators.has(tower)
-			const can = tower.canUpgrade()
-			if (can && !has) {
-				this.createUpgradeIndicator(tower)
-			} else if (!can && has) {
-				this.removeUpgradeIndicator(tower)
-			}
+	private setHoveredTower(tower: Tower | undefined): void {
+		// If the hovered tower hasn't changed, do nothing
+		if (this.hoveredTower === tower) return
+
+		// Hide indicators for the previously hovered tower
+		if (this.hoveredTower && this.upgradeIndicators.has(this.hoveredTower)) {
+			this.hideUpgradeIndicator(this.hoveredTower)
 		}
 
-		// follow tower positions and update price / tint
-		for (const [tower, container] of this.upgradeIndicators.entries()) {
-			if (!tower || !container) continue
+		// Update the hovered tower
+		this.hoveredTower = tower || null
 
-			container.x = tower.sprite.x
-			container.y = tower.sprite.y - ((tower.sprite.displayHeight) / 2 - 16)
+		// Show indicators for the newly hovered tower if it can be upgraded
+		if (this.hoveredTower && this.hoveredTower.canUpgrade()) {
+			this.showUpgradeIndicator(this.hoveredTower)
+		}
+	}
 
-			const cost = tower.getNextUpgrade()?.cost ?? 0;
+	private showUpgradeIndicator(tower: Tower): void {
+		if (!tower.canUpgrade()) return
+		if (this.upgradeIndicators.has(tower)) {
+			// If indicator already exists, just make it visible
+			const container = this.upgradeIndicators.get(tower)
+			if (container) {
+				container.setVisible(true)
+			}
+			return
+		}
 
-			// update price text
-			const priceText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined
-			if (priceText) priceText.setText(`${this.buildLevelText(tower)}: ${cost}`)
+		this.createUpgradeIndicator(tower)
+	}
 
-			// tint arrow and price based on affordability
-			const arrow = container.list.find(c => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined
-			if (arrow) {
-				if (this.gold >= cost) {
-					arrow.clearTint()
-					if (priceText) priceText.setStyle({ color: '#00ff00' })
-				} else {
-					arrow.setTint(0xff4444)
-					if (priceText) priceText.setStyle({ color: '#ff6666' })
+	private hideUpgradeIndicator(tower: Tower): void {
+		const container = this.upgradeIndicators.get(tower)
+		if (container) {
+			container.setVisible(false)
+		}
+	}
+
+	private updateUpgradeIndicators(): void {
+		// Only update indicators for the currently hovered tower
+		if (this.hoveredTower && this.hoveredTower.canUpgrade()) {
+			const container = this.upgradeIndicators.get(this.hoveredTower)
+			if (container) {
+				container.x = this.hoveredTower.sprite.x
+				container.y = this.hoveredTower.sprite.y - ((this.hoveredTower.sprite.displayHeight) / 2 - 16)
+
+				const cost = this.hoveredTower.getNextUpgrade()?.cost ?? 0;
+
+				// update price text
+				const priceText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined
+				if (priceText) priceText.setText(`${this.buildLevelText(this.hoveredTower)}: ${cost}`)
+
+				// tint arrow and price based on affordability
+				const arrow = container.list.find(c => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined
+				if (arrow) {
+					if (this.gold >= cost) {
+						arrow.clearTint()
+						if (priceText) priceText.setStyle({ color: '#00ff00' })
+					} else {
+						arrow.setTint(0xff4444)
+						if (priceText) priceText.setStyle({ color: '#ff6666' })
+					}
 				}
 			}
 		}
