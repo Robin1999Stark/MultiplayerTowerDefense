@@ -28,6 +28,7 @@ export class ControlsScene extends Phaser.Scene {
 		// Controls list
 		const controlsY = 150
 		const controls = [
+			{ key: 'P', description: 'Pause game' },
 			{ key: 'M', description: 'Toggle mute' },
 			{ key: '+', description: 'Zoom in' },
 			{ key: '-', description: 'Zoom out' },
