@@ -37,6 +37,7 @@ export class GameScene extends Phaser.Scene {
 	private selectedEvent: Event | null = null
 	private activeEvents: Event[] = []
 	private ghostTower?: Phaser.GameObjects.Sprite | undefined
+	private rangeIndicator?: Phaser.GameObjects.Graphics | undefined
 	private waveFactory!: WaveFactory
 	private audioManager: AudioManager
 	private currentBackgroundType!: string
@@ -387,11 +388,26 @@ export class GameScene extends Phaser.Scene {
 				const position = this.snapToGrid(pointer.worldX, pointer.worldY)
 				this.ghostTower.setPosition(position.x, position.y)
 
+				// Update range indicator position
+				if (this.rangeIndicator) {
+					this.rangeIndicator.setPosition(position.x, position.y)
+				}
+
 				// Color ghost based on whether placement is valid
 				const level1 = this.selectedTowerType.levels.get(1)
 				const canPlace = !this.isOnPath(position) && this.gold >= (level1?.cost || 0)
 				this.ghostTower.setAlpha(canPlace ? 0.6 : 0.3)
 				this.ghostTower.setTint(canPlace ? 0xffffff : 0xff0000)
+				
+				// Update range indicator color
+				if (this.rangeIndicator) {
+					this.rangeIndicator.clear()
+					const rangeColor = canPlace ? 0x00ff00 : 0xff0000
+					this.rangeIndicator.lineStyle(2, rangeColor, 0.5)
+					this.rangeIndicator.fillStyle(rangeColor, 0.1)
+					this.rangeIndicator.fillCircle(0, 0, level1?.range || 100)
+					this.rangeIndicator.strokeCircle(0, 0, level1?.range || 100)
+				}
 				return
 			}
 		})
@@ -809,6 +825,18 @@ export class GameScene extends Phaser.Scene {
 		this.ghostTower.setScale(scale)
 		this.applyBrauseColor(this.ghostTower, textureKey)
 
+		// Create range indicator
+		if (this.rangeIndicator) {
+			this.rangeIndicator.destroy()
+		}
+		this.rangeIndicator = this.add.graphics()
+		this.rangeIndicator.setDepth(0.5) // Below tower but above path
+		const range = level1?.range || 100
+		this.rangeIndicator.lineStyle(2, 0x00ff00, 0.5)
+		this.rangeIndicator.fillStyle(0x00ff00, 0.1)
+		this.rangeIndicator.fillCircle(0, 0, range)
+		this.rangeIndicator.strokeCircle(0, 0, range)
+
 		// Emit event for UI update
 		this.game.events.emit(GAME_EVENTS.towerTypeSelected, towerType)
 	}
@@ -820,6 +848,11 @@ export class GameScene extends Phaser.Scene {
 		if (this.ghostTower) {
 			this.ghostTower.destroy()
 			this.ghostTower = undefined
+		}
+
+		if (this.rangeIndicator) {
+			this.rangeIndicator.destroy()
+			this.rangeIndicator = undefined
 		}
 
 		// Emit event for UI update
