@@ -160,8 +160,9 @@ export class GameScene extends Phaser.Scene {
 
 		// Unlock audio on first user interaction (required by browsers)
 		this.input.once('pointerdown', () => {
-			if (this.sound.context && this.sound.context.state === 'suspended') {
-				this.sound.context.resume()
+			const webAudioManager = this.sound as Phaser.Sound.WebAudioSoundManager;
+			if (webAudioManager.context?.state === 'suspended') {
+				webAudioManager.context.resume();
 			}
 		})
 
@@ -182,32 +183,32 @@ export class GameScene extends Phaser.Scene {
 				this.zoomOut()
 			})
 
-		// Add ',' key listener to play previous music track
-		this.input.keyboard.on('keydown-COMMA', () => {
-			this.audioManager.playPreviousTrack()
-		})
+			// Add ',' key listener to play previous music track
+			this.input.keyboard.on('keydown-COMMA', () => {
+				this.audioManager.playPreviousTrack()
+			})
 
-		// Add '.' key listener to play next music track
-		this.input.keyboard.on('keydown-PERIOD', () => {
-			this.audioManager.playNextTrack()
-		})
+			// Add '.' key listener to play next music track
+			this.input.keyboard.on('keydown-PERIOD', () => {
+				this.audioManager.playNextTrack()
+			})
 
-		// Start playing background music
-		this.audioManager.startMusic()
+			// Start playing background music
+			this.audioManager.startMusic()
 
-		// Add arrow key listeners for camera movement
-		this.input.keyboard.on('keydown-UP', () => {
-			this.arrowKeys.up = true
-		})
-		this.input.keyboard.on('keydown-DOWN', () => {
-			this.arrowKeys.down = true
-		})
-		this.input.keyboard.on('keydown-LEFT', () => {
-			this.arrowKeys.left = true
-		})
-		this.input.keyboard.on('keydown-RIGHT', () => {
-			this.arrowKeys.right = true
-		})
+			// Add arrow key listeners for camera movement
+			this.input.keyboard.on('keydown-UP', () => {
+				this.arrowKeys.up = true
+			})
+			this.input.keyboard.on('keydown-DOWN', () => {
+				this.arrowKeys.down = true
+			})
+			this.input.keyboard.on('keydown-LEFT', () => {
+				this.arrowKeys.left = true
+			})
+			this.input.keyboard.on('keydown-RIGHT', () => {
+				this.arrowKeys.right = true
+			})
 
 			// Add key up listeners to stop camera movement
 			this.input.keyboard.on('keyup-UP', () => {
@@ -415,7 +416,7 @@ export class GameScene extends Phaser.Scene {
 				const canPlace = !this.isOnPath(position) && this.gold >= (level1?.cost || 0)
 				this.ghostTower.setAlpha(canPlace ? 0.6 : 0.3)
 				this.ghostTower.setTint(canPlace ? 0xffffff : 0xff0000)
-				
+
 				// Update range indicator color
 				if (this.rangeIndicator) {
 					this.rangeIndicator.clear()
@@ -494,23 +495,23 @@ export class GameScene extends Phaser.Scene {
 		// Handle camera movement with arrow keys
 		this.updateCameraMovement(delta);
 
-        for (const tower of this.towers) {
+		for (const tower of this.towers) {
 
-            tower.update(delta, this.waveFactory.getEnemies());
+			tower.update(delta, this.waveFactory.getEnemies());
 
-            if (tower.getHP() <= 0) {
-                this.removeTower(tower);
-            }
-        }
+			if (tower.getHP() <= 0) {
+				this.removeTower(tower);
+			}
+		}
 
-        for (const event of this.activeEvents) {
-            event.update(delta, this);
+		for (const event of this.activeEvents) {
+			event.update(delta, this);
 
-            if (!event.isActive()) {
-                this.activeEvents = this.activeEvents.filter((e) => e !== event);
-                this.game.events.emit(GAME_EVENTS.eventActivated, null);
-            }
-        }
+			if (!event.isActive()) {
+				this.activeEvents = this.activeEvents.filter((e) => e !== event);
+				this.game.events.emit(GAME_EVENTS.eventActivated, null);
+			}
+		}
 
 		// Sort towers by Y position for proper depth ordering
 		this.sortTowersByDepth();
@@ -604,14 +605,14 @@ export class GameScene extends Phaser.Scene {
 		this.input.setDefaultCursor(enabled ? 'crosshair' : 'default')
 	}
 
-    private buildLevelText(tower: Tower): string {
+	private buildLevelText(tower: Tower): string {
 
-        if (tower.getLevel() === tower.getMaxLevel()) {
-            return 'lvl (max)';
-        }
+		if (tower.getLevel() === tower.getMaxLevel()) {
+			return 'lvl (max)';
+		}
 
-        return 'lvl (' + tower.getLevel() + ' -> ' + (tower.getLevel() + 1) + ')';
-    }
+		return 'lvl (' + tower.getLevel() + ' -> ' + (tower.getLevel() + 1) + ')';
+	}
 
 	private createUpgradeIndicator(tower: Tower): void {
 		if (!tower.canUpgrade()) return
@@ -666,7 +667,7 @@ export class GameScene extends Phaser.Scene {
 		if (arrow) arrow.off('pointerdown')
 		container.destroy()
 		this.upgradeIndicators.delete(tower)
-		
+
 		// If this was the hovered tower, clear the hover state
 		if (this.hoveredTower === tower) {
 			this.hoveredTower = null
@@ -850,7 +851,7 @@ export class GameScene extends Phaser.Scene {
 		let textureKey;
 		let scale;
 
-			switch (towerType.id) {
+		switch (towerType.id) {
 			case TowerTypeID.SNIPER:
 				textureKey = 'tower_laser'
 				scale = 0.1
@@ -949,8 +950,8 @@ export class GameScene extends Phaser.Scene {
 		this.game.events.emit(GAME_EVENTS.livesChanged, this.lives)
 		if (this.lives <= 0) {
 			this.scene.pause()
-			this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { 
-				fontSize: '48px', 
+			this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', {
+				fontSize: '48px',
 				color: '#ff0000',
 				fontFamily: 'Arial, sans-serif',
 				fontStyle: 'bold',
@@ -1118,7 +1119,7 @@ export class GameScene extends Phaser.Scene {
 		}
 
 		// Apply the color to the game object
-		if (gameObject instanceof Phaser.GameObjects.Image || 
+		if (gameObject instanceof Phaser.GameObjects.Image ||
 			gameObject instanceof Phaser.GameObjects.Sprite ||
 			gameObject instanceof Phaser.GameObjects.TileSprite) {
 			gameObject.setTint(colorToApply);
