@@ -1032,6 +1032,11 @@ export class GameScene extends Phaser.Scene {
             this.hoveredTower = null;
         }
 
+		// Hide delete and upgrade buttons when entering build mode
+		if (this.selectedTower) {
+			this.deselectTower()
+		}
+
         // Clear selected state if this was the selected tower
         if (this.selectedTower === tower) {
             this.selectedTower = null;
