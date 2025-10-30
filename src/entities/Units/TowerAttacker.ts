@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { OrcGrunt } from './OrcGrunt'
 import { GameScene } from '@scenes/GameScene'
 import { Tower } from '../Towers/Tower'
+import { GameConfigService } from '../../services/GameConfigService'
 
 export class TowerAttacker extends OrcGrunt {
     private emissionRange: number = 150;
@@ -14,7 +15,8 @@ export class TowerAttacker extends OrcGrunt {
         super(scene, x, y, hp, speed, 'tower_attacker', 16);
 
         // Only set the green tint if Brause mode is not enabled
-        if (!this.gameConfigService.isBrauseMode()) {
+        const gameConfigService = GameConfigService.getInstance()
+        if (!gameConfigService.isBrauseMode()) {
             this.sprite.setTint(0x00ff00);
         }
     }

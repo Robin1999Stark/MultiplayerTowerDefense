@@ -43,9 +43,11 @@ export class GameScene extends Phaser.Scene {
 	private currentBackgroundType!: string
 
 	private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> = new Map()
+	private deleteButtons: Map<Tower, Phaser.GameObjects.Container> = new Map()
 	private hoveredTower: Tower | null = null
 	private isPaused = false
 	private pauseOverlay?: Phaser.GameObjects.Container
+	private selectedTower: Tower | null = null
 
 	// Camera properties
 	private currentZoom = 1
@@ -169,8 +171,9 @@ export class GameScene extends Phaser.Scene {
 
 		// Unlock audio on first user interaction (required by browsers)
 		this.input.once('pointerdown', () => {
-			if (this.sound.context && this.sound.context.state === 'suspended') {
-				this.sound.context.resume()
+			const webAudioManager = this.sound as Phaser.Sound.WebAudioSoundManager;
+			if (webAudioManager.context?.state === 'suspended') {
+				webAudioManager.context.resume();
 			}
 		})
 
@@ -191,37 +194,37 @@ export class GameScene extends Phaser.Scene {
 				this.zoomOut()
 			})
 
-		// Add ',' key listener to play previous music track
-		this.input.keyboard.on('keydown-COMMA', () => {
-			this.audioManager.playPreviousTrack()
-		})
+			// Add ',' key listener to play previous music track
+			this.input.keyboard.on('keydown-COMMA', () => {
+				this.audioManager.playPreviousTrack()
+			})
 
-		// Add '.' key listener to play next music track
-		this.input.keyboard.on('keydown-PERIOD', () => {
-			this.audioManager.playNextTrack()
-		})
+			// Add '.' key listener to play next music track
+			this.input.keyboard.on('keydown-PERIOD', () => {
+				this.audioManager.playNextTrack()
+			})
 
-		// Start playing background music
-		this.audioManager.startMusic()
+			// Start playing background music
+			this.audioManager.startMusic()
 
-		// Add 'P' key listener to toggle pause
-		this.input.keyboard.on('keydown-P', () => {
-			this.togglePause()
-		})
+			// Add 'P' key listener to toggle pause
+			this.input.keyboard.on('keydown-P', () => {
+				this.togglePause()
+			})
 
-		// Add arrow key listeners for camera movement
-		this.input.keyboard.on('keydown-UP', () => {
-			this.arrowKeys.up = true
-		})
-		this.input.keyboard.on('keydown-DOWN', () => {
-			this.arrowKeys.down = true
-		})
-		this.input.keyboard.on('keydown-LEFT', () => {
-			this.arrowKeys.left = true
-		})
-		this.input.keyboard.on('keydown-RIGHT', () => {
-			this.arrowKeys.right = true
-		})
+			// Add arrow key listeners for camera movement
+			this.input.keyboard.on('keydown-UP', () => {
+				this.arrowKeys.up = true
+			})
+			this.input.keyboard.on('keydown-DOWN', () => {
+				this.arrowKeys.down = true
+			})
+			this.input.keyboard.on('keydown-LEFT', () => {
+				this.arrowKeys.left = true
+			})
+			this.input.keyboard.on('keydown-RIGHT', () => {
+				this.arrowKeys.right = true
+			})
 
 			// Add key up listeners to stop camera movement
 			this.input.keyboard.on('keyup-UP', () => {
@@ -435,7 +438,7 @@ export class GameScene extends Phaser.Scene {
 				const canPlace = !this.isOnPath(position) && this.gold >= (level1?.cost || 0)
 				this.ghostTower.setAlpha(canPlace ? 0.6 : 0.3)
 				this.ghostTower.setTint(canPlace ? 0xffffff : 0xff0000)
-				
+
 				// Update range indicator color
 				if (this.rangeIndicator) {
 					this.rangeIndicator.clear()
@@ -456,7 +459,25 @@ export class GameScene extends Phaser.Scene {
 
 			const clickedTower = this.findTowerAt(pointer.worldX, pointer.worldY)
 			if (clickedTower) {
+				// Don't allow clicking towers when in build mode
+				if (this.selectedTowerType) {
+					return
+				}
+				
+				// Toggle tower selection
+				if (this.selectedTower === clickedTower) {
+					// Clicking the same tower again - deselect it
+					this.deselectTower()
+				} else {
+					// Select this tower
+					this.selectTower(clickedTower)
+				}
 				return
+			}
+
+			// Clicked elsewhere - deselect any selected tower
+			if (this.selectedTower) {
+				this.deselectTower()
 			}
 
 			// If an event is selected, activate it
@@ -485,6 +506,7 @@ export class GameScene extends Phaser.Scene {
 			this.game.events.emit(GAME_EVENTS.towerBuilt)
 
 			this.createUpgradeIndicator(tower)
+			this.createDeleteButton(tower)
 		})
 
 
@@ -521,27 +543,28 @@ export class GameScene extends Phaser.Scene {
 		// Handle camera movement with arrow keys
 		this.updateCameraMovement(delta);
 
-        for (const tower of this.towers) {
+		for (const tower of this.towers) {
 
-            tower.update(delta, this.waveFactory.getEnemies());
+			tower.update(delta, this.waveFactory.getEnemies());
 
-            if (tower.getHP() <= 0) {
-                this.removeTower(tower);
-            }
-        }
+			if (tower.getHP() <= 0) {
+				this.removeTower(tower);
+			}
+		}
 
-        for (const event of this.activeEvents) {
-            event.update(delta, this);
+		for (const event of this.activeEvents) {
+			event.update(delta, this);
 
-            if (!event.isActive()) {
-                this.activeEvents = this.activeEvents.filter((e) => e !== event);
-                this.game.events.emit(GAME_EVENTS.eventActivated, null);
-            }
-        }
+			if (!event.isActive()) {
+				this.activeEvents = this.activeEvents.filter((e) => e !== event);
+				this.game.events.emit(GAME_EVENTS.eventActivated, null);
+			}
+		}
 
 		// Sort towers by Y position for proper depth ordering
 		this.sortTowersByDepth();
 		this.updateUpgradeIndicators();
+		this.updateDeleteButtons();
 	}
 
 	// Method to check if a specific event type is active
@@ -631,14 +654,14 @@ export class GameScene extends Phaser.Scene {
 		this.input.setDefaultCursor(enabled ? 'crosshair' : 'default')
 	}
 
-    private buildLevelText(tower: Tower): string {
+	private buildLevelText(tower: Tower): string {
 
-        if (tower.getLevel() === tower.getMaxLevel()) {
-            return 'lvl (max)';
-        }
+		if (tower.getLevel() === tower.getMaxLevel()) {
+			return 'lvl (max)';
+		}
 
-        return 'lvl (' + tower.getLevel() + ' -> ' + (tower.getLevel() + 1) + ')';
-    }
+		return 'lvl (' + tower.getLevel() + ' -> ' + (tower.getLevel() + 1) + ')';
+	}
 
 	private createUpgradeIndicator(tower: Tower): void {
 		if (!tower.canUpgrade()) return
@@ -693,24 +716,192 @@ export class GameScene extends Phaser.Scene {
 		if (arrow) arrow.off('pointerdown')
 		container.destroy()
 		this.upgradeIndicators.delete(tower)
-		
+
 		// If this was the hovered tower, clear the hover state
 		if (this.hoveredTower === tower) {
 			this.hoveredTower = null
 		}
 	}
 
+	private createDeleteButton(tower: Tower): void {
+		if (this.deleteButtons.has(tower)) return
+
+		// Create red "X" text (no background or border)
+		const deleteText = this.add.text(0, 0, 'X', {
+			fontFamily: 'Arial, sans-serif',
+			fontSize: '20px',
+			color: '#ff0000',
+			stroke: '#000000',
+			strokeThickness: 3,
+			resolution: 2
+		})
+		.setInteractive({ useHandCursor: true })
+		.setOrigin(0.5, 0.5)
+		.setDepth(10);
+
+		const container = this.add.container(
+			tower.sprite.x,
+			tower.sprite.y + ((tower.sprite.displayHeight) / 2 + 10),
+			[deleteText]
+		).setDepth(10).setVisible(false); // Hidden by default
+
+		deleteText.on('pointerdown', (pointer: Phaser.Input.Pointer, localX: number, localY: number, event: Phaser.Types.Input.EventData) => {
+			if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+			this.deleteTower(tower);
+		});
+
+		// Add hover effect
+		deleteText.on('pointerover', () => {
+			deleteText.setScale(1.3);
+		});
+
+		deleteText.on('pointerout', () => {
+			deleteText.setScale(1.0);
+		});
+
+		this.deleteButtons.set(tower, container);
+	}
+
+	private removeDeleteButton(tower: Tower): void {
+		const container = this.deleteButtons.get(tower);
+		if (!container) return;
+
+		const deleteText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined;
+		if (deleteText) {
+			deleteText.off('pointerdown');
+			deleteText.off('pointerover');
+			deleteText.off('pointerout');
+		}
+		container.destroy();
+		this.deleteButtons.delete(tower);
+	}
+
+	private selectTower(tower: Tower): void {
+		// Deselect previous tower if any
+		if (this.selectedTower) {
+			this.deselectTower();
+		}
+
+		this.selectedTower = tower;
+
+		// Show upgrade indicator if tower can be upgraded
+		if (tower.canUpgrade()) {
+			const container = this.upgradeIndicators.get(tower);
+			if (container) {
+				container.setVisible(true);
+			}
+		}
+
+		// Show delete button
+		const deleteContainer = this.deleteButtons.get(tower);
+		if (deleteContainer) {
+			deleteContainer.setVisible(true);
+		}
+	}
+
+	private deselectTower(): void {
+		if (!this.selectedTower) return;
+
+		// Hide upgrade indicator
+		const upgradeContainer = this.upgradeIndicators.get(this.selectedTower);
+		if (upgradeContainer) {
+			upgradeContainer.setVisible(false);
+		}
+
+		// Hide delete button
+		const deleteContainer = this.deleteButtons.get(this.selectedTower);
+		if (deleteContainer) {
+			deleteContainer.setVisible(false);
+		}
+
+		this.selectedTower = null;
+	}
+
+	private deleteTower(tower: Tower): void {
+		// Remove upgrade indicator and delete button
+		this.removeUpgradeIndicator(tower);
+		this.removeDeleteButton(tower);
+
+		// Clear selected tower if this was it
+		if (this.selectedTower === tower) {
+			this.selectedTower = null;
+		}
+
+		// Remove from towers array
+		const index = this.towers.indexOf(tower);
+		if (index !== -1) {
+			this.towers.splice(index, 1);
+		}
+
+		// Refund 50% of the tower's total cost
+		const totalCost = this.calculateTowerTotalCost(tower);
+		const refund = Math.floor(totalCost * 0.5);
+		this.gold += refund;
+		this.emitGold();
+
+		// Show deletion message with refund
+		const text = this.add.text(
+			tower.sprite.x,
+			tower.sprite.y - 30,
+			`Tower Sold!\n+${refund} gold`,
+			{
+				fontFamily: 'Arial, sans-serif',
+				fontSize: '16px',
+				color: '#ffff00',
+				stroke: '#000000',
+				strokeThickness: 3,
+				align: 'center',
+				resolution: 2
+			}
+		);
+		text.setOrigin(0.5);
+		text.setDepth(100);
+
+		// Fade out and remove the message
+		this.tweens.add({
+			targets: text,
+			alpha: 0,
+			y: text.y - 20,
+			duration: 1500,
+			ease: 'Power2',
+			onComplete: () => {
+				text.destroy();
+			}
+		});
+
+		// Destroy tower sprite and effects
+		tower.sprite.destroy();
+	}
+
+	private calculateTowerTotalCost(tower: Tower): number {
+		// Calculate the total cost spent on this tower (base + all upgrades)
+		let totalCost = 0;
+		for (let level = 1; level <= tower.getLevel(); level++) {
+			const upgrade = tower.type.levels.get(level);
+			if (upgrade) {
+				totalCost += upgrade.cost;
+			}
+		}
+		return totalCost;
+	}
+
 	/**
-	 * Removes a tower from the game
+	 * Removes a tower from the game (when destroyed by enemies)
 	 * @param tower The tower to remove
 	 */
 	private removeTower(tower: Tower): void {
-		// Remove upgrade indicator if it exists
+		// Remove upgrade indicator and delete button if they exist
 		this.removeUpgradeIndicator(tower);
+		this.removeDeleteButton(tower);
 
 		// Clear hover state if this was the hovered tower
 		if (this.hoveredTower === tower) {
 			this.hoveredTower = null;
+		}
+
+		// Clear selected state if this was the selected tower
+		if (this.selectedTower === tower) {
+			this.selectedTower = null;
 		}
 
 		// Remove from towers array
@@ -750,21 +941,11 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private setHoveredTower(tower: Tower | undefined): void {
-		// If the hovered tower hasn't changed, do nothing
-		if (this.hoveredTower === tower) return
-
-		// Hide indicators for the previously hovered tower
-		if (this.hoveredTower && this.upgradeIndicators.has(this.hoveredTower)) {
-			this.hideUpgradeIndicator(this.hoveredTower)
-		}
-
-		// Update the hovered tower
+		// Update the hovered tower (for potential future use)
 		this.hoveredTower = tower || null
-
-		// Show indicators for the newly hovered tower if it can be upgraded
-		if (this.hoveredTower && this.hoveredTower.canUpgrade()) {
-			this.showUpgradeIndicator(this.hoveredTower)
-		}
+		
+		// Note: We don't show/hide indicators on hover anymore
+		// Indicators are only shown when a tower is clicked
 	}
 
 	private showUpgradeIndicator(tower: Tower): void {
@@ -789,18 +970,18 @@ export class GameScene extends Phaser.Scene {
 	}
 
 	private updateUpgradeIndicators(): void {
-		// Only update indicators for the currently hovered tower
-		if (this.hoveredTower && this.hoveredTower.canUpgrade()) {
-			const container = this.upgradeIndicators.get(this.hoveredTower)
+		// Update indicators for the currently selected tower (not hovered)
+		if (this.selectedTower && this.selectedTower.canUpgrade()) {
+			const container = this.upgradeIndicators.get(this.selectedTower)
 			if (container) {
-				container.x = this.hoveredTower.sprite.x
-				container.y = this.hoveredTower.sprite.y - ((this.hoveredTower.sprite.displayHeight) / 2 - 16)
+				container.x = this.selectedTower.sprite.x
+				container.y = this.selectedTower.sprite.y - ((this.selectedTower.sprite.displayHeight) / 2 - 16)
 
-				const cost = this.hoveredTower.getNextUpgrade()?.cost ?? 0;
+				const cost = this.selectedTower.getNextUpgrade()?.cost ?? 0;
 
 				// update price text
 				const priceText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined
-				if (priceText) priceText.setText(`${this.buildLevelText(this.hoveredTower)}: ${cost}`)
+				if (priceText) priceText.setText(`${this.buildLevelText(this.selectedTower)}: ${cost}`)
 
 				// tint arrow and price based on affordability
 				const arrow = container.list.find(c => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined
@@ -813,6 +994,17 @@ export class GameScene extends Phaser.Scene {
 						if (priceText) priceText.setStyle({ color: '#ff6666' })
 					}
 				}
+			}
+		}
+	}
+
+	private updateDeleteButtons(): void {
+		// Update delete button position for the selected tower
+		if (this.selectedTower) {
+			const container = this.deleteButtons.get(this.selectedTower);
+			if (container) {
+				container.x = this.selectedTower.sprite.x;
+				container.y = this.selectedTower.sprite.y + ((this.selectedTower.sprite.displayHeight) / 2 + 10);
 			}
 		}
 	}
@@ -877,7 +1069,7 @@ export class GameScene extends Phaser.Scene {
 		let textureKey;
 		let scale;
 
-			switch (towerType.id) {
+		switch (towerType.id) {
 			case TowerTypeID.SNIPER:
 				textureKey = 'tower_laser'
 				scale = 0.1
@@ -976,8 +1168,8 @@ export class GameScene extends Phaser.Scene {
 		this.game.events.emit(GAME_EVENTS.livesChanged, this.lives)
 		if (this.lives <= 0) {
 			this.scene.pause()
-			this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', { 
-				fontSize: '48px', 
+			this.add.text(this.scale.width / 2, this.scale.height / 2, 'Game Over', {
+				fontSize: '48px',
 				color: '#ff0000',
 				fontFamily: 'Arial, sans-serif',
 				fontStyle: 'bold',
@@ -1145,7 +1337,7 @@ export class GameScene extends Phaser.Scene {
 		}
 
 		// Apply the color to the game object
-		if (gameObject instanceof Phaser.GameObjects.Image || 
+		if (gameObject instanceof Phaser.GameObjects.Image ||
 			gameObject instanceof Phaser.GameObjects.Sprite ||
 			gameObject instanceof Phaser.GameObjects.TileSprite) {
 			gameObject.setTint(colorToApply);

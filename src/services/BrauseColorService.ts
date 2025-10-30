@@ -35,8 +35,7 @@ export class BrauseColorService {
      * @returns A random Brause color
      */
     public getRandomColor(): number {
-        return BrauseColorService.BRAUSE_COLORS[
-            Math.floor(Math.random() * BrauseColorService.BRAUSE_COLORS.length)
-        ];
+        const index = Math.floor(Math.random() * BrauseColorService.BRAUSE_COLORS.length)
+        return BrauseColorService.BRAUSE_COLORS[index] ?? BrauseColorService.BRAUSE_COLORS[0]!
     }
 }

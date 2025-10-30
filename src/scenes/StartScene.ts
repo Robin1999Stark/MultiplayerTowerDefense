@@ -694,7 +694,11 @@ export class StartScene extends Phaser.Scene {
 			if (isBrauseMode) {
 				// Select a random Brause color and convert to CSS color string
 				const randomColor = brauseColors[Math.floor(Math.random() * brauseColors.length)]
-				color = '#' + randomColor.toString(16).padStart(6, '0')
+				if (randomColor) {
+					color = '#' + randomColor.toString(16).padStart(6, '0')
+				} else {
+					color = '#00ffff'
+				}
 			} else {
 				color = '#00ffff' // Original color for deactivated
 			}
