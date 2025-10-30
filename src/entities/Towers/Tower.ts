@@ -149,27 +149,11 @@ export class Tower {
 
     protected playShootTone(): void {
         // Don't play sound if muted
-        if (this.audioManager.isMuted()) return
-
-        const audioCtx = this.getAudioContext()
-        if (!audioCtx) return
-
-        const durationSec = 0.1
-        const oscillator = audioCtx.createOscillator()
-        const gainNode = audioCtx.createGain()
-        oscillator.type = 'square'
-        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime)
-        gainNode.gain.setValueAtTime(0.0001, audioCtx.currentTime)
-        gainNode.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.005)
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durationSec)
-        oscillator.connect(gainNode)
-        gainNode.connect(audioCtx.destination)
-        oscillator.start()
-        oscillator.stop(audioCtx.currentTime + durationSec)
-        oscillator.onended = () => {
-            oscillator.disconnect()
-            gainNode.disconnect()
+        if (this.audioManager.isMuted()) {
+            return
         }
+
+        this.scene.sound.play('arrow_shoot', { volume: 0.75 })
     }
 
     protected getAudioContext(): AudioContext | null {

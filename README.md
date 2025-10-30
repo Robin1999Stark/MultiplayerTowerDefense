@@ -1,6 +1,7 @@
 # Multiplayer Tower Defense
 
-A classic Tower Defense game built with Phaser 3 and TypeScript. Defend your base against waves of enemies and bosses!
+A classic Tower Defense game built with Phaser 3 and TypeScript. Defend your base against waves of enemies and bosses!\
+[Try Game 🎮](https://robin1999stark.github.io/MultiplayerTowerDefense/)
 
 ## 🎮 Game Concept
 

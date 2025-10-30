@@ -37,6 +37,7 @@ export class GameScene extends Phaser.Scene {
 	private selectedEvent: Event | null = null
 	private activeEvents: Event[] = []
 	private ghostTower?: Phaser.GameObjects.Sprite | undefined
+	private rangeIndicator?: Phaser.GameObjects.Graphics | undefined
 	private waveFactory!: WaveFactory
 	private audioManager: AudioManager
 	private currentBackgroundType!: string
@@ -79,14 +80,19 @@ export class GameScene extends Phaser.Scene {
 		// Load external assets
 		this.load.image('orc_grunt', 'assets/units/orc_grunt.png')
 		this.load.image('orc_warrior', 'assets/units/orc_warrior.png')
+		this.load.image('orc_warrior_brause', 'assets/units/orc_warrior_brause.png')
 		this.load.image('berserker', 'assets/units/berserker.png')
 		this.load.image('chonkers', 'assets/units/chonkers.png')
 		this.load.image('cultist', 'assets/units/cultist.png')
+		this.load.image('cultist_brause', 'assets/units/cultist_brause.png')
 		this.load.image('demon', 'assets/units/demon.png')
+		this.load.image('demon_brause', 'assets/units/demon_brause.png')
 		this.load.image('imp', 'assets/units/imp.png')
 		this.load.image('skeleton', 'assets/units/skeleton.png')
+		this.load.image('skeleton_brause', 'assets/units/skeleton_brause.png')
 		this.load.image('unicorn', 'assets/units/unicorn.png')
 		this.load.image('zombie', 'assets/units/zombie.png')
+		this.load.image('zombie_brause', 'assets/units/zombie_brause.png')
 		this.load.image('tower_attacker', 'assets/units/tower_attacker.png')
 		this.load.image('castle', 'assets/castle.png')
 		this.load.image('tower_basic', 'assets/towers/tower_basic.png')
@@ -96,6 +102,7 @@ export class GameScene extends Phaser.Scene {
 		this.load.image('tower_explosive', 'assets/towers/tower_explosive.png')
 		this.load.image('tower_frost', 'assets/towers/tower_frost.png')
 		this.load.image('arrow', 'assets/projectiles/arrow.png')
+		this.load.audio('arrow_shoot', 'assets/sound/effects/arrow.mp3')
 		this.load.image('background', 'assets/background.jpeg')
 		this.load.image('background_brause', 'assets/backgrounds/meadow_brause.jpeg')
 		this.load.image('background_beach', 'assets/backgrounds/beach.jpeg')
@@ -151,6 +158,13 @@ export class GameScene extends Phaser.Scene {
 
 	create(): void {
 		this.cameras.main.setBackgroundColor('#0b1020')
+
+		// Unlock audio on first user interaction (required by browsers)
+		this.input.once('pointerdown', () => {
+			if (this.sound.context && this.sound.context.state === 'suspended') {
+				this.sound.context.resume()
+			}
+		})
 
 		// Add keyboard event listeners if keyboard input is available
 		if (this.input.keyboard) {
@@ -382,18 +396,36 @@ export class GameScene extends Phaser.Scene {
 			}
 		})
 
-		// Mouse movement for ghost tower preview
+		// Mouse movement for ghost tower preview and tower hover detection
 		this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+			// Check for tower hover
+			const towerUnderCursor = this.findTowerAt(pointer.worldX, pointer.worldY)
+			this.setHoveredTower(towerUnderCursor)
 
 			if (this.ghostTower && this.selectedTowerType) {
 				const position = this.snapToGrid(pointer.worldX, pointer.worldY)
 				this.ghostTower.setPosition(position.x, position.y)
+
+				// Update range indicator position
+				if (this.rangeIndicator) {
+					this.rangeIndicator.setPosition(position.x, position.y)
+				}
 
 				// Color ghost based on whether placement is valid
 				const level1 = this.selectedTowerType.levels.get(1)
 				const canPlace = !this.isOnPath(position) && this.gold >= (level1?.cost || 0)
 				this.ghostTower.setAlpha(canPlace ? 0.6 : 0.3)
 				this.ghostTower.setTint(canPlace ? 0xffffff : 0xff0000)
+				
+				// Update range indicator color
+				if (this.rangeIndicator) {
+					this.rangeIndicator.clear()
+					const rangeColor = canPlace ? 0x00ff00 : 0xff0000
+					this.rangeIndicator.lineStyle(2, rangeColor, 0.5)
+					this.rangeIndicator.fillStyle(rangeColor, 0.1)
+					this.rangeIndicator.fillCircle(0, 0, level1?.range || 100)
+					this.rangeIndicator.strokeCircle(0, 0, level1?.range || 100)
+				}
 				return
 			}
 		})
@@ -769,6 +801,11 @@ export class GameScene extends Phaser.Scene {
 		if (arrow) arrow.off('pointerdown')
 		container.destroy()
 		this.upgradeIndicators.delete(tower)
+		
+		// If this was the hovered tower, clear the hover state
+		if (this.hoveredTower === tower) {
+			this.hoveredTower = null
+		}
 	}
 
 	/**
@@ -783,6 +820,11 @@ export class GameScene extends Phaser.Scene {
 		// Clear selected tower if this was it
 		if (this.selectedTowerForButtons === tower) {
 			this.selectedTowerForButtons = null;
+		}
+
+		// Clear hover state if this was the hovered tower
+		if (this.hoveredTower === tower) {
+			this.hoveredTower = null;
 		}
 
 		// Remove from towers array
@@ -840,28 +882,60 @@ export class GameScene extends Phaser.Scene {
 			}
 		}
 
-		// follow tower positions and update price / tint
-		for (const [tower, container] of this.upgradeIndicators.entries()) {
-			if (!tower || !container) continue
+		// Update the hovered tower
+		this.hoveredTower = tower || null
 
-			container.x = tower.sprite.x
-			container.y = tower.sprite.y - ((tower.sprite.displayHeight) / 2 - 16)
+		// Show indicators for the newly hovered tower if it can be upgraded
+		if (this.hoveredTower && this.hoveredTower.canUpgrade()) {
+			this.showUpgradeIndicator(this.hoveredTower)
+		}
+	}
 
-			const cost = tower.getNextUpgrade()?.cost ?? 0;
+	private showUpgradeIndicator(tower: Tower): void {
+		if (!tower.canUpgrade()) return
+		if (this.upgradeIndicators.has(tower)) {
+			// If indicator already exists, just make it visible
+			const container = this.upgradeIndicators.get(tower)
+			if (container) {
+				container.setVisible(true)
+			}
+			return
+		}
 
-			// update price text
-			const priceText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined
-			if (priceText) priceText.setText(`${this.buildLevelText(tower)}: ${cost}`)
+		this.createUpgradeIndicator(tower)
+	}
 
-			// tint arrow and price based on affordability
-			const arrow = container.list.find(c => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined
-			if (arrow) {
-				if (this.gold >= cost) {
-					arrow.clearTint()
-					if (priceText) priceText.setStyle({ color: '#00ff00' })
-				} else {
-					arrow.setTint(0xff4444)
-					if (priceText) priceText.setStyle({ color: '#ff6666' })
+	private hideUpgradeIndicator(tower: Tower): void {
+		const container = this.upgradeIndicators.get(tower)
+		if (container) {
+			container.setVisible(false)
+		}
+	}
+
+	private updateUpgradeIndicators(): void {
+		// Only update indicators for the currently hovered tower
+		if (this.hoveredTower && this.hoveredTower.canUpgrade()) {
+			const container = this.upgradeIndicators.get(this.hoveredTower)
+			if (container) {
+				container.x = this.hoveredTower.sprite.x
+				container.y = this.hoveredTower.sprite.y - ((this.hoveredTower.sprite.displayHeight) / 2 - 16)
+
+				const cost = this.hoveredTower.getNextUpgrade()?.cost ?? 0;
+
+				// update price text
+				const priceText = container.list.find(c => c instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined
+				if (priceText) priceText.setText(`${this.buildLevelText(this.hoveredTower)}: ${cost}`)
+
+				// tint arrow and price based on affordability
+				const arrow = container.list.find(c => c instanceof Phaser.GameObjects.Image) as Phaser.GameObjects.Image | undefined
+				if (arrow) {
+					if (this.gold >= cost) {
+						arrow.clearTint()
+						if (priceText) priceText.setStyle({ color: '#00ff00' })
+					} else {
+						arrow.setTint(0xff4444)
+						if (priceText) priceText.setStyle({ color: '#ff6666' })
+					}
 				}
 			}
 		}
@@ -1033,6 +1107,18 @@ export class GameScene extends Phaser.Scene {
 		this.ghostTower.setScale(scale)
 		this.applyBrauseColor(this.ghostTower, textureKey)
 
+		// Create range indicator
+		if (this.rangeIndicator) {
+			this.rangeIndicator.destroy()
+		}
+		this.rangeIndicator = this.add.graphics()
+		this.rangeIndicator.setDepth(0.5) // Below tower but above path
+		const range = level1?.range || 100
+		this.rangeIndicator.lineStyle(2, 0x00ff00, 0.5)
+		this.rangeIndicator.fillStyle(0x00ff00, 0.1)
+		this.rangeIndicator.fillCircle(0, 0, range)
+		this.rangeIndicator.strokeCircle(0, 0, range)
+
 		// Emit event for UI update
 		this.game.events.emit(GAME_EVENTS.towerTypeSelected, towerType)
 	}
@@ -1044,6 +1130,11 @@ export class GameScene extends Phaser.Scene {
 		if (this.ghostTower) {
 			this.ghostTower.destroy()
 			this.ghostTower = undefined
+		}
+
+		if (this.rangeIndicator) {
+			this.rangeIndicator.destroy()
+			this.rangeIndicator = undefined
 		}
 
 		// Emit event for UI update
