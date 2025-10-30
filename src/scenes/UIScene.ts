@@ -114,6 +114,15 @@ export class UIScene extends Phaser.Scene {
             g.strokeCircle(8, 8, 8); // Coin outline
             g.generateTexture('coin_icon', 16, 16);
         }
+
+        // Load fairy sprite for button
+        if (!this.textures.exists('fairy_brause')) {
+            this.load.image(
+                'fairy_brause',
+                'assets/protectors/fairy_brause.png'
+            );
+        }
+
         g.destroy();
     }
 
@@ -675,58 +684,136 @@ export class UIScene extends Phaser.Scene {
         }
     }
 
+    /**
+     * Get the Y position of the castle from GameScene
+     */
+    private getCastleY(gameScene: GameScene): number {
+        // Get path points from game scene
+        if (gameScene.pathPoints && gameScene.pathPoints.length > 0) {
+            const endPoint =
+                gameScene.pathPoints[gameScene.pathPoints.length - 1];
+            if (endPoint) {
+                // Castle is positioned at endPoint.y - 43
+                return endPoint.y - 43;
+            }
+        }
+
+        // Default to middle of screen if path not available
+        return this.scale.height / 2;
+    }
+
     private createFairyBuyButton(): void {
-        const buttonWidth = 120;
-        const buttonHeight = 50;
+        const buttonWidth = 140;
+        const buttonHeight = 60;
         const padding = 10;
 
-        // Position button in the middle right of the screen
+        // Get castle position from GameScene to avoid overlap
+        const gameScene = this.scene.get('GameScene') as GameScene;
+        const castleY = this.getCastleY(gameScene);
+
+        // Position button in the middle right of the screen, but avoid castle
         const x = this.scale.width - padding - buttonWidth;
-        const y = this.scale.height / 2 - buttonHeight / 2;
+        let y = this.scale.height / 2 - buttonHeight / 2;
+
+        // Castle area extends from castleY - 100 to castleY + 100 (approximate castle height)
+        const castleTopBound = castleY - 100;
+        const castleBottomBound = castleY + 100;
+        const buttonTopEdge = y;
+        const buttonBottomEdge = y + buttonHeight;
+
+        // Check if button would overlap with castle vertically
+        const wouldOverlap = !(
+            buttonBottomEdge < castleTopBound ||
+            buttonTopEdge > castleBottomBound
+        );
+
+        if (wouldOverlap) {
+            // Move button to avoid castle
+            // Try to place it above the castle first
+            const topUIHeight = 70; // Height of top UI
+            const aboveCastleY = castleTopBound - buttonHeight - padding;
+
+            if (aboveCastleY > topUIHeight + padding) {
+                // Enough space above castle
+                y = aboveCastleY;
+            } else {
+                // Not enough space above, place below castle
+                const bottomUIHeight = 90; // Height of bottom UI
+                const belowCastleY = castleBottomBound + padding;
+
+                if (
+                    belowCastleY + buttonHeight <
+                    this.scale.height - bottomUIHeight - padding
+                ) {
+                    // Enough space below castle
+                    y = belowCastleY;
+                } else {
+                    // If neither above nor below works, place at the topmost safe position
+                    y = topUIHeight + padding;
+                }
+            }
+        }
 
         this.fairyButtonContainer = this.add.container(x, y);
         this.fairyButtonContainer.setDepth(1000);
         this.fairyButtonContainer.setVisible(false); // Hidden by default
 
-        // Background
+        // Background with gradient effect
         const bg = this.add.rectangle(
             0,
             0,
             buttonWidth,
             buttonHeight,
             0xff69b4,
-            0.9
+            0.95
         );
         bg.setOrigin(0, 0);
-        bg.setStrokeStyle(2, 0xff1493);
+        bg.setStrokeStyle(3, 0xff1493);
         bg.setName('bg');
         bg.setInteractive({ useHandCursor: true });
         this.fairyButtonContainer.add(bg);
 
-        // Fairy icon (using coin icon as placeholder)
+        // Add a subtle glow effect background
+        const glow = this.add.rectangle(
+            0,
+            0,
+            buttonWidth,
+            buttonHeight,
+            0xffffff,
+            0.1
+        );
+        glow.setOrigin(0, 0);
+        glow.setName('glow');
+        this.fairyButtonContainer.add(glow);
+
+        // Fairy icon - actual fairy sprite!
         const icon = this.add.image(
             buttonWidth / 4,
             buttonHeight / 2,
-            'coin_icon'
+            'fairy_brause'
         );
-        icon.setScale(2);
-        icon.setTint(0xffff00);
+        icon.setScale(0.08);
+        icon.setName('fairy_icon');
         this.fairyButtonContainer.add(icon);
 
         // Text
         const text = this.add.text(
-            buttonWidth / 2 + 10,
+            buttonWidth / 2 + 15,
             buttonHeight / 2,
             'Buy Fairy\n500 💰',
             {
-                fontSize: '14px',
+                fontSize: '15px',
                 color: '#ffffff',
                 fontFamily: 'Arial, sans-serif',
                 align: 'center',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 2,
                 resolution: 2,
             }
         );
         text.setOrigin(0, 0.5);
+        text.setName('text');
         this.fairyButtonContainer.add(text);
 
         // Click handler
@@ -769,16 +856,18 @@ export class UIScene extends Phaser.Scene {
         // Hover effects
         bg.on('pointerover', () => {
             bg.setFillStyle(0xff1493, 1);
+            bg.setStrokeStyle(4, 0xffd700);
             this.tweens.add({
                 targets: this.fairyButtonContainer,
-                scale: 1.05,
+                scale: 1.08,
                 duration: 200,
-                ease: 'Power2',
+                ease: 'Back.easeOut',
             });
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(0xff69b4, 0.9);
+            bg.setFillStyle(0xff69b4, 0.95);
+            bg.setStrokeStyle(3, 0xff1493);
             this.tweens.add({
                 targets: this.fairyButtonContainer,
                 scale: 1,
@@ -786,6 +875,19 @@ export class UIScene extends Phaser.Scene {
                 ease: 'Power2',
             });
         });
+
+        // Add a sparkle animation to the fairy icon
+        const fairyIcon = this.fairyButtonContainer.getByName('fairy_icon');
+        if (fairyIcon) {
+            this.tweens.add({
+                targets: fairyIcon,
+                y: buttonHeight / 2 - 3,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+        }
 
         // Initial update
         this.updateFairyBuyButton();

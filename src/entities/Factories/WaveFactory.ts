@@ -11,9 +11,12 @@ export class WaveFactory {
     /**
      * Creates a new WaveFactory
      * @param scene The Phaser scene
-     * @param pathPoints The path points for enemies to follow
+     * @param pathPoints The path points for enemies to follow (can be single path or array of paths)
      */
-    constructor(scene: Phaser.Scene, pathPoints: Phaser.Math.Vector2[]) {
+    constructor(
+        scene: Phaser.Scene,
+        pathPoints: Phaser.Math.Vector2[] | Phaser.Math.Vector2[][]
+    ) {
         this.scene = scene;
         this.enemyFactory = new EnemyFactory(scene, pathPoints);
         // Initialize with wave 1 when first created
@@ -26,7 +29,7 @@ export class WaveFactory {
     public getCurrentWave(): number {
         return this.currentWave;
     }
-    
+
     /**
      * Increments the wave number and returns the new value
      */
@@ -41,7 +44,7 @@ export class WaveFactory {
     public getEnemies(): Enemy[] {
         return this.enemyFactory.getEnemies();
     }
-    
+
     /**
      * Gets the enemy factory
      */
@@ -64,19 +67,19 @@ export class WaveFactory {
      * @param delta The time delta
      * @returns Object containing goldEarned and livesLost
      */
-    public update(delta: number): { goldEarned: number, livesLost: number } {
+    public update(delta: number): { goldEarned: number; livesLost: number } {
         const result = this.enemyFactory.updateEnemies(delta);
-        
+
         // Check if wave is complete
         if (this.waveInProgress && this.enemyFactory.isWaveComplete()) {
             this.waveInProgress = false;
-            
+
             // Notify about wave completion
             if (this.waveCompleteCallback) {
                 this.waveCompleteCallback();
             }
         }
-        
+
         return result;
     }
 
