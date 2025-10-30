@@ -11,6 +11,7 @@ import { SkeletonArcher } from '../Units/SkeletonArcher';
 import { Unicorn } from '../Units/Unicorn';
 import { Zombie } from '../Units/Zombie';
 import { TowerAttacker } from '../Units/TowerAttacker';
+import { AngryBeer } from '../Units/AngryBeer';
 import { GAME_EVENTS } from '../../scenes/GameScene';
 import { AudioManager } from '../../services/AudioManager';
 import { GameConfigService } from '../../services/GameConfigService';
@@ -27,6 +28,7 @@ export interface Enemy {
     isDead(): boolean;
     destroy(): void;
     applySlow?(durationMs: number, slowFactor: number): void;
+    applyDizzy?(durationMs: number): void;
 }
 
 export class EnemyFactory {
@@ -34,7 +36,9 @@ export class EnemyFactory {
     private enemies: Enemy[] = [];
     private spawnTimer?: Phaser.Time.TimerEvent;
     private readonly pathPoints: Phaser.Math.Vector2[] = [];
-    private goldEarningFunction: (isBoss: boolean) => number = (isBoss: boolean) => isBoss ? 100 : 10;
+    private goldEarningFunction: (isBoss: boolean) => number = (
+        isBoss: boolean
+    ) => (isBoss ? 100 : 10);
     private audioManager: AudioManager;
     private gameConfigService: GameConfigService;
     private brauseColorService: BrauseColorService;
@@ -60,9 +64,15 @@ export class EnemyFactory {
     }
 
     public startWave(wave: number): void {
-        // OrcWarrior every 5th wave
+        // OrcWarrior every 5th wave (boss)
         if (wave % 5 === 0) {
             this.spawnOrcWarrior(wave);
+            return;
+        }
+
+        // AngryBeer every 2nd wave (but not on boss waves)
+        if (wave % 2 === 0) {
+            this.spawnAngryBeer(wave);
             return;
         }
 
@@ -90,10 +100,11 @@ export class EnemyFactory {
             SkeletonArcher,
             TowerAttacker,
             Unicorn,
-            Zombie
+            Zombie,
         ];
 
-        const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+        const randomType =
+            enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
         if (randomType) {
             this.spawnEnemy(randomType, wave);
         }
@@ -103,7 +114,14 @@ export class EnemyFactory {
         this.spawnEnemy(OrcWarrior, wave);
     }
 
-    private spawnEnemy(enemyType: { spawn(scene: Phaser.Scene, wave: number): Enemy }, wave: number): void {
+    private spawnAngryBeer(wave: number): void {
+        this.spawnEnemy(AngryBeer, wave);
+    }
+
+    private spawnEnemy(
+        enemyType: { spawn(scene: Phaser.Scene, wave: number): Enemy },
+        wave: number
+    ): void {
         const enemy = enemyType.spawn(this.scene, wave);
 
         // Apply Brause color to the enemy sprite if in Brause mode
@@ -120,7 +138,10 @@ export class EnemyFactory {
         this.enemies.push(enemy);
     }
 
-    public updateEnemies(delta: number): { goldEarned: number, livesLost: number } {
+    public updateEnemies(delta: number): {
+        goldEarned: number;
+        livesLost: number;
+    } {
         let goldEarned = 0;
         let livesLost = 0;
 
@@ -128,8 +149,21 @@ export class EnemyFactory {
             enemy.update(delta, this.pathPoints);
 
             if (enemy.isDead()) {
-                const isBoss = enemy.sprite.texture.key === 'orc_warrior';
-                goldEarned += this.goldEarningFunction(isBoss);
+                const isBoss =
+                    enemy.sprite.texture.key === 'orc_warrior' ||
+                    enemy.sprite.texture.key === 'orc_warrior_brause';
+                const isAngryBeer =
+                    enemy.sprite.texture.key === 'angry_beer_brause';
+
+                if (isAngryBeer) {
+                    // AngryBeer gives more gold than standard enemies but less than bosses
+                    goldEarned += 30;
+                    // Emit event for angry beer kill
+                    this.scene.game.events.emit(GAME_EVENTS.angryBeerKilled);
+                } else {
+                    goldEarned += this.goldEarningFunction(isBoss);
+                }
+
                 this.playPlop();
                 this.removeEnemy(enemy);
                 continue;
@@ -141,8 +175,10 @@ export class EnemyFactory {
                 const castleX = endPoint.x - 40;
                 const castleY = endPoint.y - 43;
                 const distanceToCastle = Phaser.Math.Distance.Between(
-                    enemy.sprite.x, enemy.sprite.y,
-                    castleX, castleY
+                    enemy.sprite.x,
+                    enemy.sprite.y,
+                    castleX,
+                    castleY
                 );
 
                 if (distanceToCastle < 50) {
@@ -182,14 +218,19 @@ export class EnemyFactory {
     private flingEnemyOffscreen(enemy: Enemy): void {
         // Disable physics and fling the sprite offscreen with a spin, then destroy
         enemy.sprite.setVelocity(0, 0);
-        const body = enemy.sprite.body as Phaser.Physics.Arcade.Body | null | undefined;
+        const body = enemy.sprite.body as
+            | Phaser.Physics.Arcade.Body
+            | null
+            | undefined;
         if (body) body.setEnable(false);
 
         const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-        const distance = Math.max(this.scene.scale.width, this.scene.scale.height) + 200;
+        const distance =
+            Math.max(this.scene.scale.width, this.scene.scale.height) + 200;
         const targetX = enemy.sprite.x + Math.cos(angle) * distance;
         const targetY = enemy.sprite.y + Math.sin(angle) * distance;
-        const spin = Phaser.Math.FloatBetween(20, 60) * (Math.random() < 0.5 ? -1 : 1);
+        const spin =
+            Phaser.Math.FloatBetween(20, 60) * (Math.random() < 0.5 ? -1 : 1);
 
         this.scene.tweens.add({
             targets: enemy.sprite,
@@ -198,15 +239,17 @@ export class EnemyFactory {
             rotation: enemy.sprite.rotation + spin,
             duration: 4500,
             ease: 'Quad.easeOut',
-            onComplete: () => enemy.destroy()
+            onComplete: () => enemy.destroy(),
         });
     }
 
     public isWaveComplete(): boolean {
-        return Boolean(this.enemies.length === 0 &&
-               this.spawnTimer && 
-               this.spawnTimer.getRepeatCount() === 0 && 
-               this.spawnTimer.getProgress() === 1);
+        return Boolean(
+            this.enemies.length === 0 &&
+                this.spawnTimer &&
+                this.spawnTimer.getRepeatCount() === 0 &&
+                this.spawnTimer.getProgress() === 1
+        );
     }
 
     public playPlop(): void {
@@ -221,10 +264,19 @@ export class EnemyFactory {
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(160, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + durationSec);
+        osc.frequency.exponentialRampToValueAtTime(
+            300,
+            audioCtx.currentTime + durationSec
+        );
         gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + durationSec);
+        gain.gain.exponentialRampToValueAtTime(
+            0.12,
+            audioCtx.currentTime + 0.01
+        );
+        gain.gain.exponentialRampToValueAtTime(
+            0.001,
+            audioCtx.currentTime + durationSec
+        );
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
@@ -242,7 +294,8 @@ export class EnemyFactory {
         if (existingCtx) return existingCtx;
 
         try {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            const AudioContextClass =
+                window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return null;
 
             const newCtx = new AudioContextClass();
@@ -281,7 +334,10 @@ export class EnemyFactory {
      * @param gameObject The game object to apply the color to
      * @param textureKey The texture key used for the game object
      */
-    private applyBrauseColor(gameObject: Phaser.GameObjects.GameObject, textureKey: string): void {
+    private applyBrauseColor(
+        gameObject: Phaser.GameObjects.GameObject,
+        textureKey: string
+    ): void {
         // Only apply color in brause mode
         if (!this.gameConfigService.isBrauseMode()) {
             return;
@@ -297,8 +353,10 @@ export class EnemyFactory {
         const randomColor = this.brauseColorService.getRandomColor();
 
         // Apply the color to the game object
-        if (gameObject instanceof Phaser.GameObjects.Image || 
-            gameObject instanceof Phaser.GameObjects.Sprite) {
+        if (
+            gameObject instanceof Phaser.GameObjects.Image ||
+            gameObject instanceof Phaser.GameObjects.Sprite
+        ) {
             gameObject.setTint(randomColor);
         }
     }

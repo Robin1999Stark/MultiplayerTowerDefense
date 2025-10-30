@@ -1,29 +1,33 @@
-import Phaser from 'phaser'
-import { Enemy } from '../Factories/EnemyFactory'
-import {TowerLevelUpgrade, TowerType} from '../../services/TowerStore'
-import { AudioManager } from '../../services/AudioManager'
-import { GameConfigService } from '../../services/GameConfigService'
-import { BrauseColorService } from '../../services/BrauseColorService'
+import Phaser from 'phaser';
+import { Enemy } from '../Factories/EnemyFactory';
+import { TowerLevelUpgrade, TowerType } from '../../services/TowerStore';
+import { AudioManager } from '../../services/AudioManager';
+import { GameConfigService } from '../../services/GameConfigService';
+import { BrauseColorService } from '../../services/BrauseColorService';
 
 export class Tower {
-
     private hpText?: Phaser.GameObjects.Text;
 
-    public sprite: Phaser.GameObjects.Sprite
-    protected scene: Phaser.Scene
-    public readonly type: TowerType
-    protected audioManager: AudioManager
-    protected gameConfigService: GameConfigService
-    protected brauseColorService: BrauseColorService
+    public sprite: Phaser.GameObjects.Sprite;
+    protected scene: Phaser.Scene;
+    public readonly type: TowerType;
+    protected audioManager: AudioManager;
+    protected gameConfigService: GameConfigService;
+    protected brauseColorService: BrauseColorService;
 
-    protected range: number = 0
-    protected fireRateMs: number = 0
-    protected damage: number = 0
-    protected timeSinceShot = 0
-    protected hp: number = 100
+    protected range: number = 0;
+    protected fireRateMs: number = 0;
+    protected damage: number = 0;
+    protected timeSinceShot = 0;
+    protected hp: number = 100;
 
-    protected level = 1
-    protected baseScale = 0.08
+    protected level = 1;
+    protected baseScale = 0.08;
+
+    // Incapacitation state
+    private isIncapacitated: boolean = false;
+    private incapacitationTimer: number = 0;
+    private incapacitationDuration: number = 0;
 
     constructor(scene: Phaser.Scene, x: number, y: number, type: TowerType) {
         this.scene = scene;
@@ -61,21 +65,34 @@ export class Tower {
                 color: '#ffffff',
                 stroke: '#000000',
                 strokeThickness: 3,
-                resolution: 2
+                resolution: 2,
             }
         );
         this.hpText.setOrigin(0.5);
         this.hpText.setDepth(3);
     }
 
-
     update(deltaMs: number, enemies: Enemy[]): void {
-        this.timeSinceShot += deltaMs
-        if (this.timeSinceShot < this.fireRateMs) return
-        const target = this.findTarget(enemies)
-        if (!target) return
-        this.timeSinceShot = 0
-        this.shoot(target)
+        // Handle incapacitation
+        if (this.isIncapacitated) {
+            this.incapacitationTimer += deltaMs;
+            if (this.incapacitationTimer >= this.incapacitationDuration) {
+                this.removeIncapacitation();
+            }
+            // Update HP text even when incapacitated
+            if (this.hpText) {
+                this.hpText.setPosition(this.sprite.x, this.sprite.y + 20);
+                this.updateHPDisplay();
+            }
+            return; // Don't shoot while incapacitated
+        }
+
+        this.timeSinceShot += deltaMs;
+        if (this.timeSinceShot < this.fireRateMs) return;
+        const target = this.findTarget(enemies);
+        if (!target) return;
+        this.timeSinceShot = 0;
+        this.shoot(target);
 
         // Update HP text position
         if (this.hpText) {
@@ -85,42 +102,67 @@ export class Tower {
     }
 
     private findTarget(enemies: Enemy[]): Enemy | undefined {
-        let nearest: Enemy | undefined
-        let nearestDist = Number.POSITIVE_INFINITY
+        let nearest: Enemy | undefined;
+        let nearestDist = Number.POSITIVE_INFINITY;
         for (const e of enemies) {
-            const d = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, e.sprite.x, e.sprite.y)
+            const d = Phaser.Math.Distance.Between(
+                this.sprite.x,
+                this.sprite.y,
+                e.sprite.x,
+                e.sprite.y
+            );
             if (d <= this.range && d < nearestDist) {
-                nearestDist = d
-                nearest = e
+                nearestDist = d;
+                nearest = e;
             }
         }
-        return nearest
+        return nearest;
     }
 
     protected shoot(target: Enemy): void {
         // Audio blip for the shot
-        this.playShootTone()
+        this.playShootTone();
 
         // Visual bullet: tweened sprite that damages on arrival
         const bulletTextureKey = 'arrow';
-        const bullet = this.scene.add.sprite(this.sprite.x, this.sprite.y, this.getBrauseTexture(bulletTextureKey))
-        bullet.setScale(0.03)
-        bullet.setOrigin(0.5, 0.5)
-        bullet.setDepth(3)
-        this.applyBrauseColor(bullet, bulletTextureKey)
-        const duration = Math.max(120, Math.min(400, Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y) * 4))
-        const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, target.sprite.x, target.sprite.y)
-        bullet.setRotation(angle - Math.PI / 2)
+        const bullet = this.scene.add.sprite(
+            this.sprite.x,
+            this.sprite.y,
+            this.getBrauseTexture(bulletTextureKey)
+        );
+        bullet.setScale(0.03);
+        bullet.setOrigin(0.5, 0.5);
+        bullet.setDepth(3);
+        this.applyBrauseColor(bullet, bulletTextureKey);
+        const duration = Math.max(
+            120,
+            Math.min(
+                400,
+                Phaser.Math.Distance.Between(
+                    this.sprite.x,
+                    this.sprite.y,
+                    target.sprite.x,
+                    target.sprite.y
+                ) * 4
+            )
+        );
+        const angle = Phaser.Math.Angle.Between(
+            this.sprite.x,
+            this.sprite.y,
+            target.sprite.x,
+            target.sprite.y
+        );
+        bullet.setRotation(angle - Math.PI / 2);
         this.scene.tweens.add({
             targets: bullet,
             x: target.sprite.x,
             y: target.sprite.y,
             duration,
             onComplete: () => {
-                bullet.destroy()
-                target.takeDamage(this.damage)
-            }
-        })
+                bullet.destroy();
+                target.takeDamage(this.damage);
+            },
+        });
     }
 
     public getCurrentStats(): TowerLevelUpgrade | null {
@@ -130,7 +172,10 @@ export class Tower {
             return null;
         }
 
-        return {...currentLevel, baseScale: currentLevel?.baseScale ?? this.baseScale};
+        return {
+            ...currentLevel,
+            baseScale: currentLevel?.baseScale ?? this.baseScale,
+        };
     }
 
     public getNextUpgrade(): TowerLevelUpgrade | null {
@@ -140,7 +185,10 @@ export class Tower {
             return null;
         }
 
-        return {...nextLevel, baseScale: (nextLevel?.baseScale ?? this.baseScale) * 1.10};
+        return {
+            ...nextLevel,
+            baseScale: (nextLevel?.baseScale ?? this.baseScale) * 1.1,
+        };
     }
 
     public getLevel(): number {
@@ -150,36 +198,36 @@ export class Tower {
     protected playShootTone(): void {
         // Don't play sound if muted
         if (this.audioManager.isMuted()) {
-            return
+            return;
         }
 
-        this.scene.sound.play('arrow_shoot', { volume: 0.75 })
+        this.scene.sound.play('arrow_shoot', { volume: 0.75 });
     }
 
     protected getAudioContext(): AudioContext | null {
-        const phaserSound = this.scene.sound as { context?: AudioContext }
-        const existingCtx = phaserSound?.context || window.audioCtx
+        const phaserSound = this.scene.sound as { context?: AudioContext };
+        const existingCtx = phaserSound?.context || window.audioCtx;
 
-        if (existingCtx) return existingCtx
+        if (existingCtx) return existingCtx;
 
         try {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext
-            if (!AudioContextClass) return null
+            const AudioContextClass =
+                window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
 
-            const newCtx = new AudioContextClass()
-            window.audioCtx = newCtx
-            return newCtx
+            const newCtx = new AudioContextClass();
+            window.audioCtx = newCtx;
+            return newCtx;
         } catch (error) {
-            return null
+            return null;
         }
     }
 
     public canUpgrade(): boolean {
-        return this.level < this.getMaxLevel()
+        return this.level < this.getMaxLevel();
     }
 
     public upgrade(): boolean {
-
         if (!this.canUpgrade()) {
             return false;
         }
@@ -195,11 +243,10 @@ export class Tower {
         this.playUpgradeEffect();
         this.updateHPDisplay();
 
-        return true
+        return true;
     }
 
     protected upgradeStats(upgrade: TowerLevelUpgrade): void {
-
         this.range = upgrade.range;
         this.fireRateMs = upgrade.fireRateMs;
         this.damage = upgrade.damage;
@@ -207,99 +254,142 @@ export class Tower {
         this.sprite.setScale(upgrade.baseScale);
     }
 
-    public getMaxLevel()
-    {
+    public getMaxLevel() {
         return this.type.levels.size;
     }
 
-	protected playUpgradeEffect(): void {
-		this.scene.tweens.add({
-			targets: this.sprite,
-			scale: this.baseScale * 1.25,
-			duration: 140,
-			yoyo: true,
-			ease: 'Sine.easeInOut'
-		})
+    protected playUpgradeEffect(): void {
+        this.scene.tweens.add({
+            targets: this.sprite,
+            scale: this.baseScale * 1.25,
+            duration: 140,
+            yoyo: true,
+            ease: 'Sine.easeInOut',
+        });
 
-		this.sprite.setTintFill(0xffff99)
-		this.scene.time.delayedCall(220, () => {
-			this.sprite.clearTint()
-			// Reapply Brause color after the upgrade effect
-			const textureKey = `tower_${this.type.id}`;
-			this.applyBrauseColor(this.sprite, textureKey);
-		})
-	}
+        this.sprite.setTintFill(0xffff99);
+        this.scene.time.delayedCall(220, () => {
+            this.sprite.clearTint();
+            // Reapply Brause color after the upgrade effect
+            const textureKey = `tower_${this.type.id}`;
+            this.applyBrauseColor(this.sprite, textureKey);
+        });
+    }
 
-	public takeDamage(amount: number): boolean {
-		this.hp -= amount;
+    public takeDamage(amount: number): boolean {
+        this.hp -= amount;
 
         this.updateHPDisplay();
 
-	// Visual feedback for damage
-		this.sprite.setTintFill(0xff0000); // Red tint
-		this.scene.time.delayedCall(100, () => {
-			this.sprite.clearTint();
-			// Reapply Brause color after the damage effect
-			const textureKey = `tower_${this.type.id}`;
-			this.applyBrauseColor(this.sprite, textureKey);
-		});
+        // Visual feedback for damage
+        this.sprite.setTintFill(0xff0000); // Red tint
+        this.scene.time.delayedCall(100, () => {
+            this.sprite.clearTint();
+            // Reapply Brause color after the damage effect
+            const textureKey = `tower_${this.type.id}`;
+            this.applyBrauseColor(this.sprite, textureKey);
+        });
 
-		// Check if tower is destroyed
-		if (this.hp <= 0) {
-			this.playDestroyEffect();
-			if (this.hpText) {
-				this.hpText.destroy();
-			}
-			return true;
-		}
+        // Check if tower is destroyed
+        if (this.hp <= 0) {
+            this.playDestroyEffect();
+            if (this.hpText) {
+                this.hpText.destroy();
+            }
+            return true;
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	public getHP(): number {
-		return this.hp;
-	}
+    public getHP(): number {
+        return this.hp;
+    }
 
-	private playDestroyEffect(): void {
-		// Create explosion effect
-		const bulletTextureKey = 'bullet';
-		const brauseTextureKey = this.getBrauseTexture(bulletTextureKey);
+    /**
+     * Incapacitate the tower for a specified duration
+     * @param durationMs Duration in milliseconds
+     */
+    public incapacitate(durationMs: number): void {
+        this.isIncapacitated = true;
+        this.incapacitationTimer = 0;
+        this.incapacitationDuration = durationMs;
 
-		// Check if we need to apply a brause color
-		let tint;
-		if (this.gameConfigService.isBrauseMode() && brauseTextureKey === bulletTextureKey) {
-			// Get a random color from the BrauseColorService
-			tint = this.brauseColorService.getRandomColor();
-		}
+        // Visual feedback - orange/beer color tint
+        this.sprite.setTint(0xffa500);
+    }
 
-		const particleConfig: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig = {
-			speed: { min: 100, max: 200 },
-			angle: { min: 0, max: 360 },
-			scale: { start: 1, end: 0 },
-			lifespan: 800,
-			blendMode: 'ADD',
-			quantity: 20
-		};
+    /**
+     * Remove incapacitation from the tower
+     */
+    private removeIncapacitation(): void {
+        this.isIncapacitated = false;
+        this.incapacitationTimer = 0;
+        this.incapacitationDuration = 0;
 
-		// Add tint if needed
-		if (tint) {
-			particleConfig.tint = tint;
-		}
+        // Clear tint
+        this.sprite.clearTint();
+        // Reapply Brause color
+        const textureKey = `tower_${this.type.id}`;
+        this.applyBrauseColor(this.sprite, textureKey);
+    }
 
-		const particles = this.scene.add.particles(this.sprite.x, this.sprite.y, brauseTextureKey, particleConfig);
+    /**
+     * Check if the tower is currently incapacitated
+     */
+    public isCurrentlyIncapacitated(): boolean {
+        return this.isIncapacitated;
+    }
 
-		// Fade out the tower
-		this.scene.tweens.add({
-			targets: this.sprite,
-			alpha: 0,
-			scale: this.sprite.scale * 0.5,
-			duration: 300,
-			ease: 'Power2',
-			onComplete: () => {
-				particles.destroy();
-			}
-		});
-	}
+    private playDestroyEffect(): void {
+        // Create explosion effect
+        const bulletTextureKey = 'bullet';
+        const brauseTextureKey = this.getBrauseTexture(bulletTextureKey);
+
+        // Check if we need to apply a brause color
+        let tint;
+        if (
+            this.gameConfigService.isBrauseMode() &&
+            brauseTextureKey === bulletTextureKey
+        ) {
+            // Get a random color from the BrauseColorService
+            tint = this.brauseColorService.getRandomColor();
+        }
+
+        const particleConfig: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig =
+            {
+                speed: { min: 100, max: 200 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 1, end: 0 },
+                lifespan: 800,
+                blendMode: 'ADD',
+                quantity: 20,
+            };
+
+        // Add tint if needed
+        if (tint) {
+            particleConfig.tint = tint;
+        }
+
+        const particles = this.scene.add.particles(
+            this.sprite.x,
+            this.sprite.y,
+            brauseTextureKey,
+            particleConfig
+        );
+
+        // Fade out the tower
+        this.scene.tweens.add({
+            targets: this.sprite,
+            alpha: 0,
+            scale: this.sprite.scale * 0.5,
+            duration: 300,
+            ease: 'Power2',
+            onComplete: () => {
+                particles.destroy();
+            },
+        });
+    }
 
     private updateHPDisplay(): void {
         if (this.hpText) {
@@ -350,7 +440,10 @@ export class Tower {
      * @param gameObject The game object to apply the color to
      * @param textureKey The texture key used for the game object
      */
-    protected applyBrauseColor(gameObject: Phaser.GameObjects.GameObject, textureKey: string): void {
+    protected applyBrauseColor(
+        gameObject: Phaser.GameObjects.GameObject,
+        textureKey: string
+    ): void {
         // Only apply color in brause mode
         if (!this.gameConfigService.isBrauseMode()) {
             return;
@@ -366,8 +459,10 @@ export class Tower {
         const randomColor = this.brauseColorService.getRandomColor();
 
         // Apply the color to the game object
-        if (gameObject instanceof Phaser.GameObjects.Image || 
-            gameObject instanceof Phaser.GameObjects.Sprite) {
+        if (
+            gameObject instanceof Phaser.GameObjects.Image ||
+            gameObject instanceof Phaser.GameObjects.Sprite
+        ) {
             gameObject.setTint(randomColor);
         }
     }

@@ -9,6 +9,7 @@ import { EventStore } from '../services/EventStore';
 import { AudioManager } from '../services/AudioManager';
 import { GameConfigService } from '../services/GameConfigService';
 import { BrauseColorService } from '../services/BrauseColorService';
+import { FairyBrause } from '../entities/Protectors/FairyBrause';
 
 export const GAME_EVENTS = {
     placeTowerToggle: 'ui.placeTowerToggle',
@@ -16,6 +17,7 @@ export const GAME_EVENTS = {
     livesChanged: 'game.livesChanged',
     waveChanged: 'game.waveChanged',
     enemyKilled: 'game.enemyKilled',
+    angryBeerKilled: 'game.angryBeerKilled',
     towerBuilt: 'game.towerBuilt',
     towerTypeSelected: 'game.towerTypeSelected',
     towerUpgraded: 'game.towerUpgraded',
@@ -41,6 +43,8 @@ export class GameScene extends Phaser.Scene {
     private waveFactory!: WaveFactory;
     private audioManager: AudioManager;
     private currentBackgroundType!: string;
+    private angryBeersDefeated: number = 0;
+    private fairyBrause: FairyBrause | null = null;
 
     private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> =
         new Map();
@@ -107,7 +111,12 @@ export class GameScene extends Phaser.Scene {
         this.load.image('unicorn', 'assets/units/unicorn.png');
         this.load.image('zombie', 'assets/units/zombie.png');
         this.load.image('zombie_brause', 'assets/units/zombie_brause.png');
+        this.load.image(
+            'angry_beer_brause',
+            'assets/units/angry_beer_brause.png'
+        );
         this.load.image('tower_attacker', 'assets/units/tower_attacker.png');
+        this.load.image('fairy_brause', 'assets/protectors/fairy_brause.png');
         this.load.image('castle', 'assets/castle.png');
         this.load.image('castle_brause', 'assets/castle_brause.png');
         this.load.image('tower_basic', 'assets/towers/tower_basic.png');
@@ -459,6 +468,11 @@ export class GameScene extends Phaser.Scene {
             }
         );
 
+        // Subscribe to angry beer killed event
+        this.game.events.on(GAME_EVENTS.angryBeerKilled, () => {
+            this.angryBeersDefeated++;
+        });
+
         // Subscribe to event activation from UI
         this.game.events.on(GAME_EVENTS.eventActivated, () => {
             if (this.selectedEvent) {
@@ -655,6 +669,11 @@ export class GameScene extends Phaser.Scene {
                 );
                 this.game.events.emit(GAME_EVENTS.eventActivated, null);
             }
+        }
+
+        // Update fairy if it exists
+        if (this.fairyBrause) {
+            this.fairyBrause.update(delta, this.waveFactory.getEnemies());
         }
 
         // Sort towers by Y position for proper depth ordering
@@ -1752,5 +1771,55 @@ export class GameScene extends Phaser.Scene {
 
         // Start the menu scene
         this.scene.start('StartScene');
+    }
+
+    /**
+     * Get the number of angry beers defeated
+     */
+    public getAngryBeersDefeated(): number {
+        return this.angryBeersDefeated;
+    }
+
+    /**
+     * Check if the fairy can be purchased
+     */
+    public canPurchaseFairy(): boolean {
+        return (
+            this.angryBeersDefeated >= 3 &&
+            this.fairyBrause === null &&
+            this.gold >= 500
+        );
+    }
+
+    /**
+     * Purchase and spawn the FairyBrause
+     */
+    public purchaseFairy(): boolean {
+        if (!this.canPurchaseFairy()) {
+            return false;
+        }
+
+        // Deduct gold
+        this.gold -= 500;
+        this.emitGold();
+
+        // Get castle position
+        if (this.pathPoints.length > 0) {
+            const endPoint = this.pathPoints[this.pathPoints.length - 1]!;
+            const castleX = endPoint.x - 40;
+            const castleY = endPoint.y - 43;
+
+            // Create fairy at castle position
+            this.fairyBrause = new FairyBrause(this, castleX, castleY);
+        }
+
+        return true;
+    }
+
+    /**
+     * Check if fairy exists
+     */
+    public hasFairy(): boolean {
+        return this.fairyBrause !== null;
     }
 }
