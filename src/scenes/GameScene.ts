@@ -1002,8 +1002,8 @@ export class GameScene extends Phaser.Scene {
             },
         });
 
-        // Destroy tower sprite and effects
-        tower.sprite.destroy();
+        // Destroy tower (including sprite and HP display)
+        tower.destroy();
     }
 
     private calculateTowerTotalCost(tower: Tower): number {
@@ -1076,6 +1076,9 @@ export class GameScene extends Phaser.Scene {
                 text.destroy();
             },
         });
+
+        // Destroy tower (including sprite and HP display)
+        tower.destroy();
     }
 
     private setHoveredTower(tower: Tower | undefined): void {
