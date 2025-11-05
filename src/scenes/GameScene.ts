@@ -121,14 +121,23 @@ export class GameScene extends Phaser.Scene {
         this.load.image('castle', 'assets/castle.png');
         this.load.image('castle_brause', 'assets/castle_brause.png');
         this.load.image('tower_basic', 'assets/towers/tower_basic.png');
+        this.load.image('tower_basic_brause', 'assets/towers/tower_basic_brause.png');
         this.load.image('tower_laser', 'assets/towers/tower_laser.png');
+        this.load.image('tower_laser_brause', 'assets/towers/tower_laser_brause.png');
         this.load.image(
             'tower_rapid_fire',
             'assets/towers/tower_rapid_fire.png'
         );
+        this.load.image(
+            'tower_rapid_fire_brause',
+            'assets/towers/tower_rapid_fire_brause.png'
+        );
         this.load.image('tower_rapid', 'assets/towers/tower_rapid.png');
+        this.load.image('tower_rapid_brause', 'assets/towers/tower_rapid_brause.png');
         this.load.image('tower_explosive', 'assets/towers/tower_explosive.png');
+        this.load.image('tower_explosive_brause', 'assets/towers/tower_explosive_brause.png');
         this.load.image('tower_frost', 'assets/towers/tower_frost.png');
+        this.load.image('tower_frost_brause', 'assets/towers/tower_frost_brause.png');
         this.load.image('arrow', 'assets/projectiles/arrow.png');
         this.load.audio('arrow_shoot', 'assets/sound/effects/arrow.mp3');
         this.load.image('background', 'assets/background.jpeg');
