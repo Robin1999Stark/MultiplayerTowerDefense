@@ -10,8 +10,8 @@ export class PathGenerator {
     static bottomUIHeight = 90; // Height of bottom UI (tower cards + padding)
 
     /**
-     * Generates 1-3 randomized paths for enemies to follow across the map
-     * Paths can cross each other and all lead towards the castle
+     * Generates 1-2 randomized paths for enemies to follow across the map
+     * Paths can cross each other up to 3 times and all lead towards the castle
      * @param mapWidth - Width of the game map
      * @param mapHeight - Height of the game map
      * @returns Array of path arrays, where each path is an array of Vector2 waypoints
@@ -20,8 +20,8 @@ export class PathGenerator {
         mapWidth: number,
         mapHeight: number
     ): Phaser.Math.Vector2[][] {
-        // Randomly choose 1, 2, or 3 paths
-        const numberOfPaths = Phaser.Math.Between(1, 3);
+        // Randomly choose 1 or 2 paths (max 2)
+        const numberOfPaths = Phaser.Math.Between(1, 2);
         const paths: Phaser.Math.Vector2[][] = [];
 
         // Define safe area (excluding UI zones at top and bottom)
@@ -41,6 +41,22 @@ export class PathGenerator {
             safeMaxYForCastle
         );
 
+        // Pre-determine crossing zones if we have 2 paths (max 3 crossings)
+        const crossingZones: { x: number; width: number }[] = [];
+        if (numberOfPaths === 2) {
+            // Create 0-3 crossing zones where paths are allowed to be close
+            const numCrossings = Phaser.Math.Between(0, 3);
+            const segmentWidth = mapWidth / (numCrossings + 2); // Distribute crossings
+            
+            for (let i = 0; i < numCrossings; i++) {
+                const crossingX = segmentWidth * (i + 1) + Phaser.Math.Between(-50, 50);
+                crossingZones.push({
+                    x: crossingX,
+                    width: 100 // Width of the crossing zone
+                });
+            }
+        }
+
         // Generate each path
         for (let pathIndex = 0; pathIndex < numberOfPaths; pathIndex++) {
             const numberOfTurningPoints = Phaser.Math.Between(7, 10);
@@ -53,7 +69,8 @@ export class PathGenerator {
                 castleEndY,
                 numberOfTurningPoints,
                 pathIndex,
-                numberOfPaths
+                numberOfPaths,
+                crossingZones
             );
             paths.push(path);
         }
@@ -79,6 +96,32 @@ export class PathGenerator {
     }
 
     /**
+     * Determines which edge a path should start from
+     * @param pathIndex - Index of this path (0 or 1)
+     * @param totalPaths - Total number of paths being generated
+     * @returns 'left', 'top', or 'bottom'
+     */
+    private static determineStartEdge(
+        pathIndex: number,
+        totalPaths: number
+    ): 'left' | 'top' | 'bottom' {
+        if (totalPaths === 1) {
+            // Single path: 50% left, 25% top, 25% bottom
+            const rand = Phaser.Math.Between(0, 3);
+            if (rand === 0) return 'top';
+            if (rand === 1) return 'bottom';
+            return 'left';
+        } else {
+            // Two paths: ensure good separation - one from top, one from bottom
+            if (pathIndex === 0) {
+                return 'top';
+            } else {
+                return 'bottom';
+            }
+        }
+    }
+
+    /**
      * Generates a single path from left to right
      * @param mapWidth - Width of the game map
      * @param mapHeight - Height of the game map
@@ -87,8 +130,9 @@ export class PathGenerator {
      * @param endX - X coordinate of the castle
      * @param endY - Y coordinate of the castle
      * @param numberOfTurningPoints - Number of turns in the path
-     * @param pathIndex - Index of this path (0, 1, or 2)
+     * @param pathIndex - Index of this path (0 or 1)
      * @param totalPaths - Total number of paths being generated
+     * @param crossingZones - Array of zones where paths are allowed to cross
      * @returns Array of Vector2 waypoints defining the path
      */
     private static generateSinglePath(
@@ -100,35 +144,41 @@ export class PathGenerator {
         endY: number,
         numberOfTurningPoints: number,
         pathIndex: number,
-        totalPaths: number
+        totalPaths: number,
+        crossingZones: { x: number; width: number }[] = []
     ): Phaser.Math.Vector2[] {
         // Now build path from left to right, ensuring all segments are horizontal or vertical
         const waypoints: Phaser.Math.Vector2[] = [];
 
-        // Start point - always at the left edge, within safe area
-        // Distribute starting points vertically if multiple paths
-        const startX = 0;
+        // Start point - can be from left edge, top, or bottom in first third of map
+        const firstThirdX = mapWidth / 3;
+        let startX: number;
         let startY: number;
-
-        if (totalPaths === 1) {
-            // Single path: random starting Y
-            startY = Phaser.Math.Between(minY, maxY);
-        } else if (totalPaths === 2) {
-            // Two paths: divide into top and bottom areas
-            if (pathIndex === 0) {
-                startY = Phaser.Math.Between(minY, minY + (maxY - minY) / 2);
-            } else {
-                startY = Phaser.Math.Between(minY + (maxY - minY) / 2, maxY);
-            }
+        
+        // Determine starting edge based on path index
+        const startEdge = this.determineStartEdge(pathIndex, totalPaths);
+        
+        if (startEdge === 'top') {
+            // Start from top edge within first third
+            startX = Phaser.Math.Between(this.margin, firstThirdX);
+            startY = minY;
+        } else if (startEdge === 'bottom') {
+            // Start from bottom edge within first third
+            startX = Phaser.Math.Between(this.margin, firstThirdX);
+            startY = maxY;
         } else {
-            // Three paths: divide into top, middle, and bottom areas
-            const third = (maxY - minY) / 3;
-            if (pathIndex === 0) {
-                startY = Phaser.Math.Between(minY, minY + third);
-            } else if (pathIndex === 1) {
-                startY = Phaser.Math.Between(minY + third, minY + 2 * third);
+            // Start from left edge
+            startX = 0;
+            if (totalPaths === 1) {
+                // Single path: random starting Y
+                startY = Phaser.Math.Between(minY, maxY);
             } else {
-                startY = Phaser.Math.Between(minY + 2 * third, maxY);
+                // Two paths: strong separation - top third and bottom third
+                if (pathIndex === 0) {
+                    startY = Phaser.Math.Between(minY, minY + (maxY - minY) / 4);
+                } else {
+                    startY = Phaser.Math.Between(minY + 3 * (maxY - minY) / 4, maxY);
+                }
             }
         }
 
@@ -138,8 +188,42 @@ export class PathGenerator {
         waypoints.push(new Phaser.Math.Vector2(currentX, currentY));
 
         // Alternate between horizontal and vertical movements
-        let isHorizontal = true; // Start with horizontal movement
+        // If starting from top or bottom edge, first movement should be vertical to enter play area
+        let isHorizontal = startEdge === 'left'; // Start horizontal only from left edge
         let turnsRemaining = numberOfTurningPoints;
+
+        // Define strict separated zones for each path
+        // For 2 paths: one stays in top half, one in bottom half, except in crossing zones
+        const separationBuffer = 80; // Minimum distance to keep paths apart
+        let strictLaneMin: number;
+        let strictLaneMax: number;
+        
+        if (totalPaths === 1) {
+            // Single path can use full height
+            strictLaneMin = minY;
+            strictLaneMax = maxY;
+        } else {
+            // Two paths: divide space with clear separation
+            const midPoint = (minY + maxY) / 2;
+            if (pathIndex === 0) {
+                // Top path
+                strictLaneMin = minY;
+                strictLaneMax = midPoint - separationBuffer / 2;
+            } else {
+                // Bottom path
+                strictLaneMin = midPoint + separationBuffer / 2;
+                strictLaneMax = maxY;
+            }
+        }
+        
+        /**
+         * Helper function to check if current X position is in a crossing zone
+         */
+        const isInCrossingZone = (x: number): boolean => {
+            return crossingZones.some(zone => 
+                x >= zone.x - zone.width / 2 && x <= zone.x + zone.width / 2
+            );
+        };
 
         // Criterion 3 & 4: Plan path efficiently, ensuring final segment is horizontal from left
         // Keep generating waypoints until we reach near the end
@@ -191,33 +275,49 @@ export class PathGenerator {
                     turnsRemaining--;
                 }
             } else {
-                // Criterion 2: Move vertically towards the target Y
+                // Criterion 2: Move vertically with strict lane enforcement
                 let targetY = currentY;
 
                 if (turnsRemaining > 0 && currentX < endX - this.margin) {
-                    // Move towards endY, but allow some deviation for interesting paths
                     const lineLength = Phaser.Math.Between(
                         this.minLineLength * mapHeight,
                         this.maxLineLength * mapHeight
                     );
                     const directionToEnd = endY > currentY ? 1 : -1;
-
-                    // Sometimes move towards end, sometimes add random variation
-                    if (
-                        Phaser.Math.Between(0, 1) === 1 &&
-                        Math.abs(endY - currentY) > lineLength
-                    ) {
-                        // Move towards the end
-                        targetY = currentY + directionToEnd * lineLength;
+                    
+                    // Check if we're in a crossing zone
+                    const inCrossingZone = isInCrossingZone(currentX);
+                    
+                    if (inCrossingZone && totalPaths > 1) {
+                        // In crossing zone: allow more freedom to cross into other path's area
+                        // Move towards end or add variation
+                        if (
+                            Phaser.Math.Between(0, 1) === 1 &&
+                            Math.abs(endY - currentY) > lineLength
+                        ) {
+                            targetY = currentY + directionToEnd * lineLength;
+                        } else {
+                            const randomDirection =
+                                Phaser.Math.Between(0, 1) === 1 ? 1 : -1;
+                            targetY = currentY + randomDirection * (lineLength * 0.6);
+                        }
+                        // In crossing zone, allow full map height but still respect safe bounds
+                        targetY = Phaser.Math.Clamp(targetY, minY, maxY);
                     } else {
-                        // Random movement (but still towards end generally)
-                        const randomDirection =
-                            Phaser.Math.Between(0, 1) === 1 ? 1 : -1;
-                        targetY = currentY + randomDirection * lineLength;
+                        // Outside crossing zone: enforce strict lane separation
+                        if (currentY < strictLaneMin) {
+                            // Move back into lane
+                            targetY = Math.min(currentY + lineLength, strictLaneMax);
+                        } else if (currentY > strictLaneMax) {
+                            // Move back into lane
+                            targetY = Math.max(currentY - lineLength, strictLaneMin);
+                        } else {
+                            // Stay in lane, move with variation
+                            targetY = currentY + directionToEnd * (lineLength * 0.4);
+                        }
+                        // Clamp to strict lane bounds (not crossing zones)
+                        targetY = Phaser.Math.Clamp(targetY, strictLaneMin, strictLaneMax);
                     }
-
-                    // Clamp to safe area
-                    targetY = Phaser.Math.Clamp(targetY, minY, maxY);
                 } else {
                     // Align with end for final approach
                     targetY = endY;

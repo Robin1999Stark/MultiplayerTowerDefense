@@ -36,16 +36,31 @@ export class UIScene extends Phaser.Scene {
         if (!this.textures.exists('tower_basic')) {
             this.load.image('tower_basic', 'assets/towers/tower_basic.png');
         }
+        if (!this.textures.exists('tower_basic_brause')) {
+            this.load.image('tower_basic_brause', 'assets/towers/tower_basic_brause.png');
+        }
         if (!this.textures.exists('tower_laser')) {
             this.load.image('tower_laser', 'assets/towers/tower_laser.png');
         }
+        if (!this.textures.exists('tower_laser_brause')) {
+            this.load.image('tower_laser_brause', 'assets/towers/tower_laser_brause.png');
+        }
         if (!this.textures.exists('tower_rapid')) {
             this.load.image('tower_rapid', 'assets/towers/tower_rapid.png');
+        }
+        if (!this.textures.exists('tower_rapid_brause')) {
+            this.load.image('tower_rapid_brause', 'assets/towers/tower_rapid_brause.png');
         }
         if (!this.textures.exists('tower_rapid_fire')) {
             this.load.image(
                 'tower_rapid_fire',
                 'assets/towers/tower_rapid_fire.png'
+            );
+        }
+        if (!this.textures.exists('tower_rapid_fire_brause')) {
+            this.load.image(
+                'tower_rapid_fire_brause',
+                'assets/towers/tower_rapid_fire_brause.png'
             );
         }
         if (!this.textures.exists('tower_explosive')) {
@@ -54,8 +69,17 @@ export class UIScene extends Phaser.Scene {
                 'assets/towers/tower_explosive.png'
             );
         }
+        if (!this.textures.exists('tower_explosive_brause')) {
+            this.load.image(
+                'tower_explosive_brause',
+                'assets/towers/tower_explosive_brause.png'
+            );
+        }
         if (!this.textures.exists('tower_frost')) {
             this.load.image('tower_frost', 'assets/towers/tower_frost.png');
+        }
+        if (!this.textures.exists('tower_frost_brause')) {
+            this.load.image('tower_frost_brause', 'assets/towers/tower_frost_brause.png');
         }
 
         // Load effect icons
@@ -433,6 +457,7 @@ export class UIScene extends Phaser.Scene {
         );
         towerSprite.setScale(scale);
         towerSprite.setDepth(0);
+        this.applyBrauseColor(towerSprite, textureKey);
         cardContainer.add(towerSprite);
 
         // Hotkey indicator
@@ -684,75 +709,20 @@ export class UIScene extends Phaser.Scene {
         }
     }
 
-    /**
-     * Get the Y position of the castle from GameScene
-     */
-    private getCastleY(gameScene: GameScene): number {
-        // Get path points from game scene
-        if (gameScene.pathPoints && gameScene.pathPoints.length > 0) {
-            const endPoint =
-                gameScene.pathPoints[gameScene.pathPoints.length - 1];
-            if (endPoint) {
-                // Castle is positioned at endPoint.y - 43
-                return endPoint.y - 43;
-            }
-        }
-
-        // Default to middle of screen if path not available
-        return this.scale.height / 2;
-    }
-
     private createFairyBuyButton(): void {
         const buttonWidth = 140;
         const buttonHeight = 60;
         const padding = 10;
+        const cardSpacing = 6;
 
-        // Get castle position from GameScene to avoid overlap
-        const gameScene = this.scene.get('GameScene') as GameScene;
-        const castleY = this.getCastleY(gameScene);
-
-        // Position button in the middle right of the screen, but avoid castle
-        const x = this.scale.width - padding - buttonWidth;
-        let y = this.scale.height / 2 - buttonHeight / 2;
-
-        // Castle area extends from castleY - 100 to castleY + 100 (approximate castle height)
-        const castleTopBound = castleY - 100;
-        const castleBottomBound = castleY + 100;
-        const buttonTopEdge = y;
-        const buttonBottomEdge = y + buttonHeight;
-
-        // Check if button would overlap with castle vertically
-        const wouldOverlap = !(
-            buttonBottomEdge < castleTopBound ||
-            buttonTopEdge > castleBottomBound
-        );
-
-        if (wouldOverlap) {
-            // Move button to avoid castle
-            // Try to place it above the castle first
-            const topUIHeight = 70; // Height of top UI
-            const aboveCastleY = castleTopBound - buttonHeight - padding;
-
-            if (aboveCastleY > topUIHeight + padding) {
-                // Enough space above castle
-                y = aboveCastleY;
-            } else {
-                // Not enough space above, place below castle
-                const bottomUIHeight = 90; // Height of bottom UI
-                const belowCastleY = castleBottomBound + padding;
-
-                if (
-                    belowCastleY + buttonHeight <
-                    this.scale.height - bottomUIHeight - padding
-                ) {
-                    // Enough space below castle
-                    y = belowCastleY;
-                } else {
-                    // If neither above nor below works, place at the topmost safe position
-                    y = topUIHeight + padding;
-                }
-            }
-        }
+        // Position button next to the tower cards at the bottom right
+        // Tower cards are positioned from right to left at the bottom
+        const towerTypes = this.towerStore.getAllTowerTypes();
+        const cardWidth = 80;
+        
+        // Calculate position: to the left of all tower cards
+        const x = this.scale.width - padding - (towerTypes.length * (cardWidth + cardSpacing)) - cardSpacing - buttonWidth;
+        const y = this.scale.height - padding - buttonHeight;
 
         this.fairyButtonContainer = this.add.container(x, y);
         this.fairyButtonContainer.setDepth(1000);
