@@ -28,7 +28,8 @@ export const GAME_EVENTS = {
 export class GameScene extends Phaser.Scene {
     static KEY = 'GameScene';
 
-    pathPoints: Phaser.Math.Vector2[] = [];
+    pathPoints: Phaser.Math.Vector2[] = []; // For backward compatibility (first path)
+    allPaths: Phaser.Math.Vector2[][] = []; // All paths (1-3 paths)
     private towers: Tower[] = [];
     private isPlacingTower = false;
     private gold = 100;
@@ -333,14 +334,20 @@ export class GameScene extends Phaser.Scene {
         this.registry.set('lives', this.lives);
         this.registry.set('wave', 1);
 
-        // Generate a randomized path across the map
-        this.pathPoints = PathGenerator.generateRandomPath(
+        // Generate 1-3 randomized paths across the map
+        this.allPaths = PathGenerator.generateRandomPaths(
             this.scale.width,
             this.scale.height
         );
 
-        // Initialize wave factory
-        this.waveFactory = new WaveFactory(this, this.pathPoints);
+        // Keep first path for backward compatibility
+        this.pathPoints = this.allPaths[0] || [];
+
+        // Initialize wave factory with all paths
+        this.waveFactory = new WaveFactory(
+            this,
+            this.allPaths as Phaser.Math.Vector2[] | Phaser.Math.Vector2[][]
+        );
 
         // Set up wave completion callback
         this.waveFactory.onWaveComplete(() => {
@@ -352,7 +359,7 @@ export class GameScene extends Phaser.Scene {
             });
         });
 
-        // Draw the path using tiled floor sprites
+        // Draw all paths using tiled floor sprites
         const floorTextureKey = 'floor_tile';
         const floorTileKey = this.getBrauseTexture(floorTextureKey);
         const tex = this.textures.get(floorTileKey);
@@ -369,82 +376,85 @@ export class GameScene extends Phaser.Scene {
             ? tileH / (src as HTMLImageElement | HTMLCanvasElement).height
             : 1;
 
-        // First, draw corner tiles at waypoints to fill gaps
-        for (let i = 1; i < this.pathPoints.length - 1; i++) {
-            const waypoint = this.pathPoints[i]!;
-            const cornerTile = this.add.tileSprite(
-                waypoint.x,
-                waypoint.y,
-                tileW,
-                tileH,
-                floorTileKey
-            );
-            cornerTile.setDepth(0);
-            cornerTile.setOrigin(0.5, 0.5);
-            cornerTile.tileScaleX = tileScaleX;
-            cornerTile.tileScaleY = tileScaleY;
-            this.applyBrauseColor(cornerTile, floorTextureKey);
+        // Draw each path
+        for (const pathPoints of this.allPaths) {
+            // First, draw corner tiles at waypoints to fill gaps
+            for (let i = 1; i < pathPoints.length - 1; i++) {
+                const waypoint = pathPoints[i]!;
+                const cornerTile = this.add.tileSprite(
+                    waypoint.x,
+                    waypoint.y,
+                    tileW,
+                    tileH,
+                    floorTileKey
+                );
+                cornerTile.setDepth(0);
+                cornerTile.setOrigin(0.5, 0.5);
+                cornerTile.tileScaleX = tileScaleX;
+                cornerTile.tileScaleY = tileScaleY;
+                this.applyBrauseColor(cornerTile, floorTextureKey);
 
-            // Create a soft edge mask for corner tiles
-            const cornerMaskGfx = this.add.graphics();
-            cornerMaskGfx.setDepth(-1);
-            cornerMaskGfx.setPosition(waypoint.x, waypoint.y);
-            const halfW = tileW / 2;
-            const halfH = tileH / 2;
-            for (let y = -halfH; y <= halfH; y++) {
-                for (let x = -halfW; x <= halfW; x++) {
-                    const distFromCenter = Math.sqrt(x * x + y * y);
-                    const maxDist = Math.min(halfW, halfH);
-                    const t = distFromCenter / maxDist;
-                    const alpha = Phaser.Math.Clamp(1 - t, 0, 1);
-                    cornerMaskGfx.fillStyle(0xffffff, alpha);
-                    cornerMaskGfx.fillRect(x, y, 1, 1);
+                // Create a soft edge mask for corner tiles
+                const cornerMaskGfx = this.add.graphics();
+                cornerMaskGfx.setDepth(-1);
+                cornerMaskGfx.setPosition(waypoint.x, waypoint.y);
+                const halfW = tileW / 2;
+                const halfH = tileH / 2;
+                for (let y = -halfH; y <= halfH; y++) {
+                    for (let x = -halfW; x <= halfW; x++) {
+                        const distFromCenter = Math.sqrt(x * x + y * y);
+                        const maxDist = Math.min(halfW, halfH);
+                        const t = distFromCenter / maxDist;
+                        const alpha = Phaser.Math.Clamp(1 - t, 0, 1);
+                        cornerMaskGfx.fillStyle(0xffffff, alpha);
+                        cornerMaskGfx.fillRect(x, y, 1, 1);
+                    }
                 }
+                const cornerMask = new Phaser.Display.Masks.BitmapMask(
+                    this,
+                    cornerMaskGfx
+                );
+                cornerTile.setMask(cornerMask);
+                cornerMaskGfx.setVisible(false);
             }
-            const cornerMask = new Phaser.Display.Masks.BitmapMask(
-                this,
-                cornerMaskGfx
-            );
-            cornerTile.setMask(cornerMask);
-            cornerMaskGfx.setVisible(false);
-        }
 
-        // Then draw the line segments between waypoints
-        for (let i = 0; i < this.pathPoints.length - 1; i++) {
-            const a = this.pathPoints[i]!;
-            const b = this.pathPoints[i + 1]!;
-            const midX = (a.x + b.x) / 2;
-            const midY = (a.y + b.y) / 2;
-            const dist = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
-            const angle = Phaser.Math.Angle.Between(a.x, a.y, b.x, b.y);
-            const stripe = this.add.tileSprite(
-                midX,
-                midY,
-                dist,
-                tileH,
-                floorTileKey
-            );
-            stripe.setDepth(0);
-            stripe.setRotation(angle);
-            stripe.setOrigin(0.5, 0.5);
-            stripe.tileScaleX = tileScaleX;
-            stripe.tileScaleY = tileScaleY;
-            this.applyBrauseColor(stripe, floorTextureKey);
-            // Create a soft edge mask so the path blends into the background
-            const maskGfx = this.add.graphics();
-            maskGfx.setDepth(-1);
-            maskGfx.setPosition(midX, midY);
-            maskGfx.setRotation(angle);
-            const halfH = tileH / 2;
-            for (let y = -halfH; y <= halfH; y++) {
-                const t = Math.abs(y) / halfH; // 0 center -> 1 edge
-                const alpha = Phaser.Math.Clamp(1 - t, 0, 1);
-                maskGfx.fillStyle(0xffffff, alpha);
-                maskGfx.fillRect(-dist / 2, y, dist, 1);
+            // Then draw the line segments between waypoints
+            for (let i = 0; i < pathPoints.length - 1; i++) {
+                const a = pathPoints[i]!;
+                const b = pathPoints[i + 1]!;
+                const midX = (a.x + b.x) / 2;
+                const midY = (a.y + b.y) / 2;
+                const dist = Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
+                const angle = Phaser.Math.Angle.Between(a.x, a.y, b.x, b.y);
+                const stripe = this.add.tileSprite(
+                    midX,
+                    midY,
+                    dist,
+                    tileH,
+                    floorTileKey
+                );
+                stripe.setDepth(0);
+                stripe.setRotation(angle);
+                stripe.setOrigin(0.5, 0.5);
+                stripe.tileScaleX = tileScaleX;
+                stripe.tileScaleY = tileScaleY;
+                this.applyBrauseColor(stripe, floorTextureKey);
+                // Create a soft edge mask so the path blends into the background
+                const maskGfx = this.add.graphics();
+                maskGfx.setDepth(-1);
+                maskGfx.setPosition(midX, midY);
+                maskGfx.setRotation(angle);
+                const halfH = tileH / 2;
+                for (let y = -halfH; y <= halfH; y++) {
+                    const t = Math.abs(y) / halfH; // 0 center -> 1 edge
+                    const alpha = Phaser.Math.Clamp(1 - t, 0, 1);
+                    maskGfx.fillStyle(0xffffff, alpha);
+                    maskGfx.fillRect(-dist / 2, y, dist, 1);
+                }
+                const mask = new Phaser.Display.Masks.BitmapMask(this, maskGfx);
+                stripe.setMask(mask);
+                maskGfx.setVisible(false);
             }
-            const mask = new Phaser.Display.Masks.BitmapMask(this, maskGfx);
-            stripe.setMask(mask);
-            maskGfx.setVisible(false);
         }
 
         // Add castle at the end of the path
@@ -1060,10 +1070,10 @@ export class GameScene extends Phaser.Scene {
             this.hoveredTower = null;
         }
 
-		// Hide delete and upgrade buttons when entering build mode
-		if (this.selectedTower) {
-			this.deselectTower()
-		}
+        // Hide delete and upgrade buttons when entering build mode
+        if (this.selectedTower) {
+            this.deselectTower();
+        }
 
         // Clear selected state if this was the selected tower
         if (this.selectedTower === tower) {
@@ -1387,11 +1397,14 @@ export class GameScene extends Phaser.Scene {
 
     private isOnPath(point: Phaser.Math.Vector2): boolean {
         // Consider within 24px of any segment centerline as on the path
-        for (let i = 0; i < this.pathPoints.length - 1; i++) {
-            const a = this.pathPoints[i]!;
-            const b = this.pathPoints[i + 1]!;
-            const dist = this.distancePointToSegment(point, a, b);
-            if (dist < 24) return true;
+        // Check all paths
+        for (const pathPoints of this.allPaths) {
+            for (let i = 0; i < pathPoints.length - 1; i++) {
+                const a = pathPoints[i]!;
+                const b = pathPoints[i + 1]!;
+                const dist = this.distancePointToSegment(point, a, b);
+                if (dist < 24) return true;
+            }
         }
         return false;
     }
@@ -1818,11 +1831,84 @@ export class GameScene extends Phaser.Scene {
             const castleX = endPoint.x - 40;
             const castleY = endPoint.y - 43;
 
-            // Create fairy at castle position
-            this.fairyBrause = new FairyBrause(this, castleX, castleY);
+            // Find a safe position to spawn the fairy (not over an enemy)
+            const safePosition = this.findSafeFairySpawnPosition(
+                castleX,
+                castleY
+            );
+
+            // Create fairy at safe position
+            this.fairyBrause = new FairyBrause(
+                this,
+                safePosition.x,
+                safePosition.y
+            );
         }
 
         return true;
+    }
+
+    /**
+     * Find a safe position to spawn the fairy, avoiding enemies
+     */
+    private findSafeFairySpawnPosition(
+        castleX: number,
+        castleY: number
+    ): { x: number; y: number } {
+        const enemies = this.waveFactory.getEnemies();
+        const minDistanceFromEnemy = 80; // Minimum distance from any enemy
+        const searchRadius = 150; // How far to search for a safe spot
+        const searchSteps = 16; // Number of positions to check in a circle
+
+        // Check if castle position is safe
+        let isSafe = true;
+        for (const enemy of enemies) {
+            const distance = Phaser.Math.Distance.Between(
+                castleX,
+                castleY,
+                enemy.sprite.x,
+                enemy.sprite.y
+            );
+            if (distance < minDistanceFromEnemy) {
+                isSafe = false;
+                break;
+            }
+        }
+
+        if (isSafe) {
+            return { x: castleX, y: castleY };
+        }
+
+        // Castle position not safe, search for alternative positions in a circle around castle
+        for (let radius = 50; radius <= searchRadius; radius += 25) {
+            for (let i = 0; i < searchSteps; i++) {
+                const angle = (i / searchSteps) * Math.PI * 2;
+                const testX = castleX + Math.cos(angle) * radius;
+                const testY = castleY + Math.sin(angle) * radius;
+
+                // Check if this position is safe from all enemies
+                let positionIsSafe = true;
+                for (const enemy of enemies) {
+                    const distance = Phaser.Math.Distance.Between(
+                        testX,
+                        testY,
+                        enemy.sprite.x,
+                        enemy.sprite.y
+                    );
+                    if (distance < minDistanceFromEnemy) {
+                        positionIsSafe = false;
+                        break;
+                    }
+                }
+
+                if (positionIsSafe) {
+                    return { x: testX, y: testY };
+                }
+            }
+        }
+
+        // If no safe position found, spawn above the castle (enemies usually don't go there)
+        return { x: castleX, y: castleY - 150 };
     }
 
     /**

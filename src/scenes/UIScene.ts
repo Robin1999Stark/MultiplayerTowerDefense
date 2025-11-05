@@ -36,16 +36,31 @@ export class UIScene extends Phaser.Scene {
         if (!this.textures.exists('tower_basic')) {
             this.load.image('tower_basic', 'assets/towers/tower_basic.png');
         }
+        if (!this.textures.exists('tower_basic_brause')) {
+            this.load.image('tower_basic_brause', 'assets/towers/tower_basic_brause.png');
+        }
         if (!this.textures.exists('tower_laser')) {
             this.load.image('tower_laser', 'assets/towers/tower_laser.png');
         }
+        if (!this.textures.exists('tower_laser_brause')) {
+            this.load.image('tower_laser_brause', 'assets/towers/tower_laser_brause.png');
+        }
         if (!this.textures.exists('tower_rapid')) {
             this.load.image('tower_rapid', 'assets/towers/tower_rapid.png');
+        }
+        if (!this.textures.exists('tower_rapid_brause')) {
+            this.load.image('tower_rapid_brause', 'assets/towers/tower_rapid_brause.png');
         }
         if (!this.textures.exists('tower_rapid_fire')) {
             this.load.image(
                 'tower_rapid_fire',
                 'assets/towers/tower_rapid_fire.png'
+            );
+        }
+        if (!this.textures.exists('tower_rapid_fire_brause')) {
+            this.load.image(
+                'tower_rapid_fire_brause',
+                'assets/towers/tower_rapid_fire_brause.png'
             );
         }
         if (!this.textures.exists('tower_explosive')) {
@@ -54,8 +69,17 @@ export class UIScene extends Phaser.Scene {
                 'assets/towers/tower_explosive.png'
             );
         }
+        if (!this.textures.exists('tower_explosive_brause')) {
+            this.load.image(
+                'tower_explosive_brause',
+                'assets/towers/tower_explosive_brause.png'
+            );
+        }
         if (!this.textures.exists('tower_frost')) {
             this.load.image('tower_frost', 'assets/towers/tower_frost.png');
+        }
+        if (!this.textures.exists('tower_frost_brause')) {
+            this.load.image('tower_frost_brause', 'assets/towers/tower_frost_brause.png');
         }
 
         // Load effect icons
@@ -114,6 +138,15 @@ export class UIScene extends Phaser.Scene {
             g.strokeCircle(8, 8, 8); // Coin outline
             g.generateTexture('coin_icon', 16, 16);
         }
+
+        // Load fairy sprite for button
+        if (!this.textures.exists('fairy_brause')) {
+            this.load.image(
+                'fairy_brause',
+                'assets/protectors/fairy_brause.png'
+            );
+        }
+
         g.destroy();
     }
 
@@ -424,6 +457,7 @@ export class UIScene extends Phaser.Scene {
         );
         towerSprite.setScale(scale);
         towerSprite.setDepth(0);
+        this.applyBrauseColor(towerSprite, textureKey);
         cardContainer.add(towerSprite);
 
         // Hotkey indicator
@@ -676,57 +710,80 @@ export class UIScene extends Phaser.Scene {
     }
 
     private createFairyBuyButton(): void {
-        const buttonWidth = 120;
-        const buttonHeight = 50;
+        const buttonWidth = 140;
+        const buttonHeight = 60;
         const padding = 10;
+        const cardSpacing = 6;
 
-        // Position button in the middle right of the screen
-        const x = this.scale.width - padding - buttonWidth;
-        const y = this.scale.height / 2 - buttonHeight / 2;
+        // Position button next to the tower cards at the bottom right
+        // Tower cards are positioned from right to left at the bottom
+        const towerTypes = this.towerStore.getAllTowerTypes();
+        const cardWidth = 80;
+        
+        // Calculate position: to the left of all tower cards
+        const x = this.scale.width - padding - (towerTypes.length * (cardWidth + cardSpacing)) - cardSpacing - buttonWidth;
+        const y = this.scale.height - padding - buttonHeight;
 
         this.fairyButtonContainer = this.add.container(x, y);
         this.fairyButtonContainer.setDepth(1000);
         this.fairyButtonContainer.setVisible(false); // Hidden by default
 
-        // Background
+        // Background with gradient effect
         const bg = this.add.rectangle(
             0,
             0,
             buttonWidth,
             buttonHeight,
             0xff69b4,
-            0.9
+            0.95
         );
         bg.setOrigin(0, 0);
-        bg.setStrokeStyle(2, 0xff1493);
+        bg.setStrokeStyle(3, 0xff1493);
         bg.setName('bg');
         bg.setInteractive({ useHandCursor: true });
         this.fairyButtonContainer.add(bg);
 
-        // Fairy icon (using coin icon as placeholder)
+        // Add a subtle glow effect background
+        const glow = this.add.rectangle(
+            0,
+            0,
+            buttonWidth,
+            buttonHeight,
+            0xffffff,
+            0.1
+        );
+        glow.setOrigin(0, 0);
+        glow.setName('glow');
+        this.fairyButtonContainer.add(glow);
+
+        // Fairy icon - actual fairy sprite!
         const icon = this.add.image(
             buttonWidth / 4,
             buttonHeight / 2,
-            'coin_icon'
+            'fairy_brause'
         );
-        icon.setScale(2);
-        icon.setTint(0xffff00);
+        icon.setScale(0.08);
+        icon.setName('fairy_icon');
         this.fairyButtonContainer.add(icon);
 
         // Text
         const text = this.add.text(
-            buttonWidth / 2 + 10,
+            buttonWidth / 2 + 15,
             buttonHeight / 2,
             'Buy Fairy\n500 💰',
             {
-                fontSize: '14px',
+                fontSize: '15px',
                 color: '#ffffff',
                 fontFamily: 'Arial, sans-serif',
                 align: 'center',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 2,
                 resolution: 2,
             }
         );
         text.setOrigin(0, 0.5);
+        text.setName('text');
         this.fairyButtonContainer.add(text);
 
         // Click handler
@@ -769,16 +826,18 @@ export class UIScene extends Phaser.Scene {
         // Hover effects
         bg.on('pointerover', () => {
             bg.setFillStyle(0xff1493, 1);
+            bg.setStrokeStyle(4, 0xffd700);
             this.tweens.add({
                 targets: this.fairyButtonContainer,
-                scale: 1.05,
+                scale: 1.08,
                 duration: 200,
-                ease: 'Power2',
+                ease: 'Back.easeOut',
             });
         });
 
         bg.on('pointerout', () => {
-            bg.setFillStyle(0xff69b4, 0.9);
+            bg.setFillStyle(0xff69b4, 0.95);
+            bg.setStrokeStyle(3, 0xff1493);
             this.tweens.add({
                 targets: this.fairyButtonContainer,
                 scale: 1,
@@ -786,6 +845,19 @@ export class UIScene extends Phaser.Scene {
                 ease: 'Power2',
             });
         });
+
+        // Add a sparkle animation to the fairy icon
+        const fairyIcon = this.fairyButtonContainer.getByName('fairy_icon');
+        if (fairyIcon) {
+            this.tweens.add({
+                targets: fairyIcon,
+                y: buttonHeight / 2 - 3,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+        }
 
         // Initial update
         this.updateFairyBuyButton();

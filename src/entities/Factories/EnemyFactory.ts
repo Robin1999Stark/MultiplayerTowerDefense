@@ -34,8 +34,10 @@ export interface Enemy {
 export class EnemyFactory {
     private readonly scene: Phaser.Scene;
     private enemies: Enemy[] = [];
+    private enemyPaths: Map<Enemy, Phaser.Math.Vector2[]> = new Map(); // Track which path each enemy is on
     private spawnTimer?: Phaser.Time.TimerEvent;
-    private readonly pathPoints: Phaser.Math.Vector2[] = [];
+    private readonly pathPoints: Phaser.Math.Vector2[] = []; // For backward compatibility (first path)
+    private readonly allPaths: Phaser.Math.Vector2[][] = []; // All available paths
     private goldEarningFunction: (isBoss: boolean) => number = (
         isBoss: boolean
     ) => (isBoss ? 100 : 10);
@@ -43,9 +45,23 @@ export class EnemyFactory {
     private gameConfigService: GameConfigService;
     private brauseColorService: BrauseColorService;
 
-    constructor(scene: Phaser.Scene, pathPoints: Phaser.Math.Vector2[]) {
+    constructor(
+        scene: Phaser.Scene,
+        pathPoints: Phaser.Math.Vector2[] | Phaser.Math.Vector2[][]
+    ) {
         this.scene = scene;
-        this.pathPoints = pathPoints;
+
+        // Check if pathPoints is an array of paths or a single path
+        if (pathPoints.length > 0 && Array.isArray(pathPoints[0])) {
+            // Multiple paths
+            this.allPaths = pathPoints as Phaser.Math.Vector2[][];
+            this.pathPoints = this.allPaths[0] || [];
+        } else {
+            // Single path (backward compatibility)
+            this.pathPoints = pathPoints as Phaser.Math.Vector2[];
+            this.allPaths = [this.pathPoints];
+        }
+
         this.audioManager = AudioManager.getInstance();
         this.gameConfigService = GameConfigService.getInstance();
         this.brauseColorService = BrauseColorService.getInstance();
@@ -70,20 +86,26 @@ export class EnemyFactory {
             return;
         }
 
-        // AngryBeer every 2nd wave (but not on boss waves)
-        if (wave % 2 === 0) {
-            this.spawnAngryBeer(wave);
-            return;
-        }
-
+        // Calculate number of regular enemies for this wave
         const count = 6 + Math.floor(wave * 1.5);
 
+        // Check if this is an AngryBeer wave (every 2nd wave, but not on boss waves)
+        const isAngryBeerWave = wave % 2 === 0;
+        const angryBeerSpawnIndex = Math.floor(count / 2); // Spawn AngryBeer in the middle of the group
+
+        // Spawn regular enemies (and AngryBeer in the middle)
+        let spawnedCount = 0;
         this.spawnTimer?.remove();
         this.spawnTimer = this.scene.time.addEvent({
             delay: 400,
             repeat: count - 1,
             callback: () => {
+                // Spawn AngryBeer in the middle of the wave
+                if (isAngryBeerWave && spawnedCount === angryBeerSpawnIndex) {
+                    this.spawnAngryBeer(wave);
+                }
                 this.spawnRandomEnemy(wave);
+                spawnedCount++;
             },
         });
     }
@@ -122,7 +144,18 @@ export class EnemyFactory {
         enemyType: { spawn(scene: Phaser.Scene, wave: number): Enemy },
         wave: number
     ): void {
+        // First, select which path this enemy will follow
+        const selectedPath =
+            this.allPaths[Phaser.Math.Between(0, this.allPaths.length - 1)]!;
+
+        // Spawn the enemy (initially at default position)
         const enemy = enemyType.spawn(this.scene, wave);
+
+        // Move the enemy to the start of its assigned path
+        const startPoint = selectedPath[0];
+        if (startPoint) {
+            enemy.sprite.setPosition(startPoint.x, startPoint.y);
+        }
 
         // Apply Brause color to the enemy sprite if in Brause mode
         const textureKey = enemy.sprite.texture.key;
@@ -135,6 +168,9 @@ export class EnemyFactory {
             this.applyBrauseColor(enemy.sprite, textureKey);
         }
 
+        // Store the path assignment for this enemy
+        this.enemyPaths.set(enemy, selectedPath);
+
         this.enemies.push(enemy);
     }
 
@@ -146,7 +182,9 @@ export class EnemyFactory {
         let livesLost = 0;
 
         for (const enemy of [...this.enemies]) {
-            enemy.update(delta, this.pathPoints);
+            // Get the path for this enemy
+            const enemyPath = this.enemyPaths.get(enemy) || this.pathPoints;
+            enemy.update(delta, enemyPath);
 
             if (enemy.isDead()) {
                 const isBoss =
@@ -170,8 +208,9 @@ export class EnemyFactory {
             }
 
             // Check if enemy is close to castle (within 50 pixels of castle position)
-            if (this.pathPoints.length > 0) {
-                const endPoint = this.pathPoints[this.pathPoints.length - 1]!;
+            // Use the enemy's specific path endpoint
+            if (enemyPath.length > 0) {
+                const endPoint = enemyPath[enemyPath.length - 1]!;
                 const castleX = endPoint.x - 40;
                 const castleY = endPoint.y - 43;
                 const distanceToCastle = Phaser.Math.Distance.Between(
@@ -201,6 +240,8 @@ export class EnemyFactory {
         const idx = this.enemies.indexOf(enemy);
         if (idx >= 0) {
             this.enemies.splice(idx, 1);
+            // Also remove from path tracking
+            this.enemyPaths.delete(enemy);
 
             if (enemy.isDead()) {
                 this.scene.game.events.emit(GAME_EVENTS.enemyKilled);

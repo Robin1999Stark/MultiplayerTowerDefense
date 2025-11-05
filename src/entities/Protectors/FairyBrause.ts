@@ -19,6 +19,7 @@ export class FairyBrause {
     private targetY: number;
     private castleX: number;
     private castleY: number;
+    private minDistanceFromEnemy: number = 60; // Minimum distance to maintain from enemies
 
     constructor(scene: Phaser.Scene, castleX: number, castleY: number) {
         this.scene = scene;
@@ -99,10 +100,27 @@ export class FairyBrause {
         const nearestEnemy = this.findNearestEnemy(enemies);
 
         if (nearestEnemy) {
-            // Always update target to the nearest enemy's current position
-            // This ensures fairy constantly tracks moving enemies
-            this.targetX = nearestEnemy.sprite.x;
-            this.targetY = nearestEnemy.sprite.y;
+            // Calculate direction towards enemy
+            const dx = nearestEnemy.sprite.x - this.sprite.x;
+            const dy = nearestEnemy.sprite.y - this.sprite.y;
+            const distanceToEnemy = Math.sqrt(dx * dx + dy * dy);
+
+            // Maintain safe distance - move towards enemy but stop at minDistanceFromEnemy
+            if (distanceToEnemy > this.minDistanceFromEnemy) {
+                // Too far, move closer
+                const safeDistance = this.minDistanceFromEnemy;
+                const targetDistance = distanceToEnemy - safeDistance;
+                const ratio = targetDistance / distanceToEnemy;
+                this.targetX = this.sprite.x + dx * ratio;
+                this.targetY = this.sprite.y + dy * ratio;
+            } else {
+                // Too close, move away to maintain safe distance
+                const safeDistance = this.minDistanceFromEnemy;
+                const targetDistance = safeDistance - distanceToEnemy;
+                const ratio = targetDistance / (distanceToEnemy || 1);
+                this.targetX = this.sprite.x - dx * ratio;
+                this.targetY = this.sprite.y - dy * ratio;
+            }
         } else {
             // No enemies, return to castle or pick random patrol point
             const dx = this.castleX - this.sprite.x;
@@ -124,16 +142,54 @@ export class FairyBrause {
         const dy = this.targetY - this.sprite.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Always move towards target (no minimum distance check)
+        // Move towards target, avoiding direct overlap with enemies
         if (distance > 0) {
             const moveDistance = this.moveSpeed * dt;
             if (distance > moveDistance) {
                 const ratio = moveDistance / distance;
-                this.sprite.x += dx * ratio;
-                this.sprite.y += dy * ratio;
+                const newX = this.sprite.x + dx * ratio;
+                const newY = this.sprite.y + dy * ratio;
+
+                // Check if new position would be too close to any enemy
+                let isSafePosition = true;
+                for (const enemy of enemies) {
+                    const distToEnemy = Phaser.Math.Distance.Between(
+                        newX,
+                        newY,
+                        enemy.sprite.x,
+                        enemy.sprite.y
+                    );
+                    if (distToEnemy < this.minDistanceFromEnemy) {
+                        isSafePosition = false;
+                        break;
+                    }
+                }
+
+                // Only move if the new position is safe
+                if (isSafePosition) {
+                    this.sprite.x = newX;
+                    this.sprite.y = newY;
+                }
             } else {
-                this.sprite.x = this.targetX;
-                this.sprite.y = this.targetY;
+                // Check if target position is safe before moving there
+                let isSafeTarget = true;
+                for (const enemy of enemies) {
+                    const distToEnemy = Phaser.Math.Distance.Between(
+                        this.targetX,
+                        this.targetY,
+                        enemy.sprite.x,
+                        enemy.sprite.y
+                    );
+                    if (distToEnemy < this.minDistanceFromEnemy) {
+                        isSafeTarget = false;
+                        break;
+                    }
+                }
+
+                if (isSafeTarget) {
+                    this.sprite.x = this.targetX;
+                    this.sprite.y = this.targetY;
+                }
             }
         }
     }
