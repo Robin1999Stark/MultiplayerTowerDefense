@@ -5,6 +5,8 @@ import { Event } from '../entities/Events/Event';
 import { EventStore } from '../services/EventStore';
 import { GameConfigService } from '../services/GameConfigService';
 import { BrauseColorService } from '../services/BrauseColorService';
+import { CampaignProgressionService } from '../services/CampaignProgressionService';
+import type { GameMode } from '../types';
 
 export class UIScene extends Phaser.Scene {
     static KEY = 'UIScene';
@@ -17,9 +19,11 @@ export class UIScene extends Phaser.Scene {
     private eventStore: EventStore;
     private gameConfigService: GameConfigService;
     private brauseColorService: BrauseColorService;
+    private campaignProgressionService: CampaignProgressionService;
     private towerStoreContainer?: Phaser.GameObjects.Container;
     private eventStoreContainer?: Phaser.GameObjects.Container;
     private fairyButtonContainer?: Phaser.GameObjects.Container;
+    private unlockUIButton?: Phaser.GameObjects.Container;
     private selectedTowerType: TowerType | null = null;
     private selectedEvent: Event | null = null;
 
@@ -29,6 +33,14 @@ export class UIScene extends Phaser.Scene {
         this.eventStore = EventStore.getInstance();
         this.gameConfigService = GameConfigService.getInstance();
         this.brauseColorService = BrauseColorService.getInstance();
+        this.campaignProgressionService = CampaignProgressionService.getInstance();
+    }
+    
+    /**
+     * Get the current game mode (reads fresh from service each time)
+     */
+    private getGameMode(): GameMode {
+        return this.gameConfigService.getGameMode();
     }
 
     preload(): void {
@@ -151,10 +163,19 @@ export class UIScene extends Phaser.Scene {
     }
 
     create(): void {
+        // Log the game mode for debugging
+        console.log('UIScene create() - Game mode:', this.getGameMode());
+        
         this.tryBindDom();
         this.createTowerStoreUI();
         this.createEventStoreUI();
         this.createFairyBuyButton();
+        
+        // Create campaign-specific UI elements
+        if (this.getGameMode() === 'campaign') {
+            console.log('Creating campaign UI elements...');
+            this.createUnlockUIButton();
+        }
 
         // Listen for tower type selection events
         this.game.events.on(
@@ -260,7 +281,21 @@ export class UIScene extends Phaser.Scene {
         this.towerStoreContainer = this.add.container(0, 0);
         this.towerStoreContainer.setDepth(1000);
 
-        const towerTypes = this.towerStore.getAllTowerTypes();
+        // Filter towers based on game mode
+        let towerTypes = this.towerStore.getAllTowerTypes();
+        if (this.getGameMode() === 'campaign') {
+            // In campaign mode, only show unlocked towers
+            console.log('Campaign mode detected - filtering towers');
+            console.log('All towers:', towerTypes.map(t => t.id));
+            
+            towerTypes = towerTypes.filter(towerType => {
+                const isUnlocked = this.campaignProgressionService.isTowerUnlocked(towerType.id);
+                console.log(`Tower ${towerType.id}: ${isUnlocked ? 'UNLOCKED' : 'LOCKED'}`);
+                return isUnlocked;
+            });
+            
+            console.log('Unlocked towers:', towerTypes.map(t => t.id));
+        }
 
         // Position cards horizontally from right to left at the bottom
         const startY = this.scale.height - padding - cardHeight;
@@ -892,6 +927,87 @@ export class UIScene extends Phaser.Scene {
                     bg.setStrokeStyle(2, 0x333333);
                 }
             }
+        }
+    }
+
+    /**
+     * Create unlock UI button
+     */
+    private createUnlockUIButton(): void {
+        const padding = 10;
+        const width = 150;
+        const height = 50;
+        
+        // Position at bottom left corner
+        const x = padding;
+        const y = this.scale.height - padding - height;
+        
+        this.unlockUIButton = this.add.container(x, y);
+        this.unlockUIButton.setDepth(1000);
+        
+        // Background
+        const bg = this.add.rectangle(0, 0, width, height, 0x4a1a8a, 0.95);
+        bg.setOrigin(0, 0);
+        bg.setStrokeStyle(2, 0x9b59b6);
+        bg.setInteractive({ useHandCursor: true });
+        bg.setName('bg');
+        this.unlockUIButton.add(bg);
+        
+        // Text
+        const text = this.add.text(width / 2, height / 2, 'Unlocks [U]', {
+            fontSize: '16px',
+            color: '#ffffff',
+            fontFamily: 'Arial, sans-serif',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2,
+            resolution: 2
+        });
+        text.setOrigin(0.5);
+        this.unlockUIButton.add(text);
+        
+        // Hover effects
+        bg.on('pointerover', () => {
+            bg.setFillStyle(0x9b59b6, 1);
+            this.tweens.add({
+                targets: this.unlockUIButton,
+                scale: 1.05,
+                duration: 200,
+                ease: 'Power2'
+            });
+        });
+        
+        bg.on('pointerout', () => {
+            bg.setFillStyle(0x4a1a8a, 0.95);
+            this.tweens.add({
+                targets: this.unlockUIButton,
+                scale: 1,
+                duration: 200,
+                ease: 'Power2'
+            });
+        });
+        
+        // Click handler
+        bg.on('pointerdown', () => {
+            this.openUnlockUI();
+        });
+        
+        // Add keyboard shortcut (U key)
+        this.input.keyboard?.on('keydown-U', () => {
+            this.openUnlockUI();
+        });
+    }
+
+    /**
+     * Open the unlock UI
+     */
+    private openUnlockUI(): void {
+        // Launch the unlock scene
+        if (!this.scene.isActive('UnlockScene')) {
+            this.scene.launch('UnlockScene');
+        } else {
+            // If already active, bring it to front
+            this.scene.bringToTop('UnlockScene');
         }
     }
 }

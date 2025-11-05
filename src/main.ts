@@ -4,6 +4,7 @@ import { GameScene } from './scenes/GameScene'
 import { UIScene } from './scenes/UIScene'
 import { StatisticsScene } from './scenes/StatisticsScene'
 import { ControlsScene } from './scenes/ControlsScene'
+import { UnlockScene } from './scenes/UnlockScene'
 
 const config: Phaser.Types.Core.GameConfig = {
 	type: Phaser.WEBGL,
@@ -32,7 +33,7 @@ const config: Phaser.Types.Core.GameConfig = {
 	audio: {
 		disableWebAudio: false
 	},
-	scene: [StartScene, ControlsScene, GameScene, StatisticsScene, UIScene]
+	scene: [StartScene, ControlsScene, GameScene, StatisticsScene, UIScene, UnlockScene]
 }
 
 new Phaser.Game(config) 

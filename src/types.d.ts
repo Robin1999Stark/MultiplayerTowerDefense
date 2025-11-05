@@ -17,3 +17,11 @@ declare module 'phaser' {
 	}
 }
 
+// Game Mode Types
+export type GameMode = 'quick-defense' | 'campaign'
+
+// Campaign Progression Types
+export interface CampaignPoints {
+    points: number
+    totalEarned: number
+}

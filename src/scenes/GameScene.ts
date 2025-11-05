@@ -9,7 +9,9 @@ import { EventStore } from '../services/EventStore';
 import { AudioManager } from '../services/AudioManager';
 import { GameConfigService } from '../services/GameConfigService';
 import { BrauseColorService } from '../services/BrauseColorService';
+import { CampaignProgressionService } from '../services/CampaignProgressionService';
 import { FairyBrause } from '../entities/Protectors/FairyBrause';
+import type { GameMode } from '../types';
 
 export const GAME_EVENTS = {
     placeTowerToggle: 'ui.placeTowerToggle',
@@ -23,6 +25,7 @@ export const GAME_EVENTS = {
     towerUpgraded: 'game.towerUpgraded',
     eventTypeSelected: 'game.eventTypeSelected',
     eventActivated: 'game.eventActivated',
+    campaignPointsChanged: 'game.campaignPointsChanged',
 } as const;
 
 export class GameScene extends Phaser.Scene {
@@ -46,6 +49,7 @@ export class GameScene extends Phaser.Scene {
     private currentBackgroundType!: string;
     private angryBeersDefeated: number = 0;
     private fairyBrause: FairyBrause | null = null;
+    private isGameOver: boolean = false;
 
     private upgradeIndicators: Map<Tower, Phaser.GameObjects.Container> =
         new Map();
@@ -74,6 +78,7 @@ export class GameScene extends Phaser.Scene {
     };
     private gameConfigService: GameConfigService;
     private brauseColorService: BrauseColorService;
+    private campaignProgressionService: CampaignProgressionService;
     private floorTileColor: number | null = null;
 
     constructor() {
@@ -83,6 +88,7 @@ export class GameScene extends Phaser.Scene {
         this.audioManager = AudioManager.getInstance();
         this.gameConfigService = GameConfigService.getInstance();
         this.brauseColorService = BrauseColorService.getInstance();
+        this.campaignProgressionService = CampaignProgressionService.getInstance();
 
         // Select random background type for this game
         const backgroundTypes = ['original', 'beach', 'ice'];
@@ -90,6 +96,13 @@ export class GameScene extends Phaser.Scene {
             backgroundTypes[
                 Math.floor(Math.random() * backgroundTypes.length)
             ]!;
+    }
+    
+    /**
+     * Get the current game mode (reads fresh from service each time)
+     */
+    private getGameMode(): GameMode {
+        return this.gameConfigService.getGameMode();
     }
 
     preload(): void {
@@ -202,14 +215,26 @@ export class GameScene extends Phaser.Scene {
     }
 
     create(): void {
-        // Reset pause state when starting/restarting the game
+        // Reset pause state and game over flag when starting/restarting the game
         this.isPaused = false;
+        this.isGameOver = false;
         if (this.pauseOverlay) {
             this.pauseOverlay.destroy();
             delete this.pauseOverlay;
         }
 
         this.cameras.main.setBackgroundColor('#0b1020');
+        
+        // Log the current game mode (for debugging and future feature development)
+        const gameMode = this.getGameMode();
+        console.log(`Starting game in ${gameMode === 'quick-defense' ? 'Quick Defense' : 'Campaign'} mode`);
+        
+        // Apply campaign skill bonuses if in campaign mode
+        if (gameMode === 'campaign') {
+            console.log('🎮 GameScene: Applying campaign bonuses');
+            this.gold += this.campaignProgressionService.getStartingGoldBonus();
+            this.lives += this.campaignProgressionService.getStartingLivesBonus();
+        }
 
         // Unlock audio on first user interaction (required by browsers)
         this.input.once('pointerdown', () => {
@@ -645,11 +670,16 @@ export class GameScene extends Phaser.Scene {
         this.emitGold();
         this.emitLives();
         this.emitWave();
+        
+        // Emit campaign points if in campaign mode
+        if (this.getGameMode() === 'campaign') {
+            this.emitCampaignPoints();
+        }
     }
 
     override update(time: number, delta: number): void {
-        // Don't update game logic when paused
-        if (this.isPaused) {
+        // Don't update game logic when paused or game is over
+        if (this.isPaused || this.isGameOver) {
             return;
         }
 
@@ -658,8 +688,28 @@ export class GameScene extends Phaser.Scene {
 
         // Update gold if enemies were killed
         if (goldEarned > 0) {
-            this.gold += goldEarned;
-            this.emitGold();
+            try {
+                // Apply gold bonus skill in campaign mode
+                const isCampaign = this.getGameMode() === 'campaign';
+                const finalGold = isCampaign 
+                    ? this.campaignProgressionService.applySkillBonus(goldEarned, 'gold')
+                    : goldEarned;
+                
+                this.gold += finalGold;
+                this.emitGold();
+                
+                // Award campaign points in campaign mode (1 point per 10 gold earned)
+                if (isCampaign) {
+                    const campaignPoints = Math.floor(goldEarned / 10);
+                    this.campaignProgressionService.addCampaignPoints(campaignPoints);
+                    this.emitCampaignPoints();
+                }
+            } catch (error) {
+                console.error('Error processing gold/campaign points:', error);
+                // Fallback: just add the gold without bonuses
+                this.gold += goldEarned;
+                this.emitGold();
+            }
         }
 
         // Update lives if enemies reached the end
@@ -1358,7 +1408,8 @@ export class GameScene extends Phaser.Scene {
     private emitLives(): void {
         this.registry.set('lives', this.lives);
         this.game.events.emit(GAME_EVENTS.livesChanged, this.lives);
-        if (this.lives <= 0) {
+        if (this.lives <= 0 && !this.isGameOver) {
+            this.isGameOver = true;
             this.scene.pause();
             this.add
                 .text(
@@ -1383,6 +1434,16 @@ export class GameScene extends Phaser.Scene {
         const currentWave = this.waveFactory.getCurrentWave();
         this.registry.set('wave', currentWave);
         this.game.events.emit(GAME_EVENTS.waveChanged, currentWave);
+    }
+
+    private emitCampaignPoints(): void {
+        try {
+            const campaignPoints = this.campaignProgressionService.getCampaignPoints();
+            this.registry.set('campaignPoints', campaignPoints);
+            this.game.events.emit(GAME_EVENTS.campaignPointsChanged, campaignPoints);
+        } catch (error) {
+            console.error('Error emitting campaign points:', error);
+        }
     }
 
     private snapToGrid(x: number, y: number): Phaser.Math.Vector2 {

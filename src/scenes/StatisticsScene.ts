@@ -1,10 +1,15 @@
 import { Scene } from 'phaser';
 import { UIScene } from './UIScene';
 import { GAME_EVENTS } from './GameScene';
+import { GameConfigService } from '../services/GameConfigService';
+import { CampaignProgressionService } from '../services/CampaignProgressionService';
+import type { GameMode } from '../types';
 
 export class StatisticsScene extends Scene {
     private statistics: { [key: string]: Phaser.GameObjects.Text } = {};
     private uiScene!: UIScene;
+    private gameConfigService: GameConfigService;
+    private campaignProgressionService: CampaignProgressionService;
     
     // Statistics tracking
     private totalGold: number = 0;
@@ -12,10 +17,20 @@ export class StatisticsScene extends Scene {
     private enemiesKilled: number = 0;
     private wavesCompleted: number = 0;
     private lives: number = 20;
+    private campaignPoints: number = 0;
 
     constructor() {
         super({ key: 'StatisticsScene' });
         console.log('StatisticsScene constructor called');
+        this.gameConfigService = GameConfigService.getInstance();
+        this.campaignProgressionService = CampaignProgressionService.getInstance();
+    }
+    
+    /**
+     * Get the current game mode (reads fresh from service each time)
+     */
+    private getGameMode(): GameMode {
+        return this.gameConfigService.getGameMode();
     }
 
     init() {
@@ -39,9 +54,12 @@ export class StatisticsScene extends Scene {
         const startX = padding;
         const startY = padding;
         const spacing = 80; // Horizontal spacing between statistics
+        
+        // Check if campaign mode to adjust panel width
+        const isCampaign = this.getGameMode() === 'campaign';
 
         // Create semi-transparent black background panel
-        const panelWidth = spacing * 5 + 50; // Width to cover all statistics including lives
+        const panelWidth = isCampaign ? spacing * 6 + 50 : spacing * 5 + 50; // Width to cover all statistics including lives (and campaign points in campaign mode)
         const panelHeight = 35; // Height to cover icons and text
         const backgroundPanel = this.add.rectangle(
             startX - 5,
@@ -86,25 +104,44 @@ export class StatisticsScene extends Scene {
             textStyle
         );
 
+        // Campaign points (only in campaign mode)
+        let statOffset = 0; // Offset to shift other stats if campaign points are shown
+        if (isCampaign) {
+            // Star icon for campaign points
+            const starIcon = this.add.text(startX + spacing * 2, startY + 2, '⭐', {
+                fontSize: '20px',
+                resolution: 2
+            });
+            starIcon.setOrigin(0, 0);
+
+            this.statistics['campaignPoints'] = this.add.text(
+                startX + spacing * 2 + 25,
+                startY + 2,
+                '0',
+                textStyle
+            );
+            statOffset = 1; // Shift other stats by one position
+        }
+
         // Towers built statistic
-        const towerIcon = this.add.image(startX + spacing * 2, startY - 3, 'tower');
+        const towerIcon = this.add.image(startX + spacing * (2 + statOffset), startY - 3, 'tower');
         towerIcon.setScale(0.04);
         towerIcon.setOrigin(0, 0);
 
         this.statistics['towersBuilt'] = this.add.text(
-            startX + spacing * 2 + 25,
+            startX + spacing * (2 + statOffset) + 25,
             startY + 2,
             '0',
             textStyle
         );
 
         // Lives statistic
-        const heartIcon = this.add.image(startX + spacing * 3, startY + 3, 'heart');
+        const heartIcon = this.add.image(startX + spacing * (3 + statOffset), startY + 3, 'heart');
         heartIcon.setScale(0.08);
         heartIcon.setOrigin(0, 0);
 
         this.statistics['lives'] = this.add.text(
-            startX + spacing * 3 + 25,
+            startX + spacing * (3 + statOffset) + 25,
             startY + 2,
             '20',
             textStyle
@@ -113,7 +150,7 @@ export class StatisticsScene extends Scene {
 
         // Waves completed statistic
         this.statistics['wavesCompleted'] = this.add.text(
-            startX + spacing * 4,
+            startX + spacing * (4 + statOffset),
             startY + 2,
             'Wave: 0',
             textStyle
@@ -125,6 +162,11 @@ export class StatisticsScene extends Scene {
         this.game.events.on(GAME_EVENTS.waveChanged, this.onWaveChanged, this);
         this.game.events.on(GAME_EVENTS.enemyKilled, this.onEnemyKilled, this);
         this.game.events.on(GAME_EVENTS.towerBuilt, this.onTowerBuilt, this);
+        
+        // Campaign-specific event listener
+        if (isCampaign) {
+            this.game.events.on(GAME_EVENTS.campaignPointsChanged, this.onCampaignPointsChanged, this);
+        }
 
         console.log('StatisticsScene created');
     }
@@ -136,6 +178,9 @@ export class StatisticsScene extends Scene {
                     this.statistics[key].setText(String(value));
                     break;
                 case 'enemiesKilled':
+                    this.statistics[key].setText(String(value));
+                    break;
+                case 'campaignPoints':
                     this.statistics[key].setText(String(value));
                     break;
                 case 'towersBuilt':
@@ -174,5 +219,10 @@ export class StatisticsScene extends Scene {
     private onLivesChanged(lives: number): void {
         this.lives = lives;
         this.updateStatistic('lives', this.lives);
+    }
+
+    private onCampaignPointsChanged(points: number): void {
+        this.campaignPoints = points;
+        this.updateStatistic('campaignPoints', this.campaignPoints);
     }
 }

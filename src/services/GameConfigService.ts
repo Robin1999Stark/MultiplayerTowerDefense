@@ -1,12 +1,15 @@
+import type { GameMode } from '../types';
+
 /**
  * GameConfigService - Singleton service to manage game configuration across the game
  * 
  * This service maintains global configuration states that persist across all scenes.
- * It provides methods to check and set the "brause" mode state.
+ * It provides methods to check and set the "brause" mode state and game mode.
  */
 export class GameConfigService {
     private static instance: GameConfigService;
     private _isBrauseMode: boolean = false;
+    private _gameMode: GameMode = 'quick-defense';
 
     /**
      * Private constructor to enforce singleton pattern
@@ -14,6 +17,8 @@ export class GameConfigService {
     private constructor() {
         // Initialize with brause mode disabled
         this._isBrauseMode = false;
+        // Default to quick defense mode
+        this._gameMode = 'quick-defense';
     }
 
     /**
@@ -47,5 +52,19 @@ export class GameConfigService {
     public toggleBrauseMode(): boolean {
         this._isBrauseMode = !this._isBrauseMode;
         return this._isBrauseMode;
+    }
+
+    /**
+     * Get the current game mode
+     */
+    public getGameMode(): GameMode {
+        return this._gameMode;
+    }
+
+    /**
+     * Set the game mode
+     */
+    public setGameMode(mode: GameMode): void {
+        this._gameMode = mode;
     }
 }
