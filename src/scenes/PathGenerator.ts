@@ -151,14 +151,13 @@ export class PathGenerator {
         const waypoints: Phaser.Math.Vector2[] = [];
 
         // Start point - always from the left edge of the map
-        let startX: number;
         let startY: number;
         
         // Determine starting edge based on path index
         const startEdge = this.determineStartEdge(pathIndex, totalPaths);
         
         // Always start from the left edge (x = 0)
-        startX = 0;
+        const startX = 0;
         
         if (startEdge === 'top') {
             // Start from left edge at top of safe area

@@ -13,16 +13,6 @@ export interface UnlockableItem {
 }
 
 /**
- * Campaign progression data
- */
-interface CampaignProgressionData {
-    campaignPoints: number;
-    totalPointsEarned: number; // Track total points earned for statistics
-    unlockedTowers: Set<TowerTypeID>;
-    unlockedSkills: Set<string>;
-}
-
-/**
  * CampaignProgressionService - Singleton service to manage campaign progression
  * 
  * This service manages:
@@ -52,7 +42,7 @@ export class CampaignProgressionService {
         
         // Expose reset function to window for debugging (in browser console)
         if (typeof window !== 'undefined') {
-            (window as any).resetCampaign = () => {
+            (window as Window & { resetCampaign?: () => void }).resetCampaign = () => {
                 this.clearAndReset();
                 console.log('✅ Campaign progress has been reset! Reload the page to see changes.');
             };
