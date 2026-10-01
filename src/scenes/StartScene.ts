@@ -391,6 +391,166 @@ export class StartScene extends Phaser.Scene {
 	}
 
 	private startGame(): void {
+		// Show mode selection UI
+		this.showModeSelection()
+	}
+
+	private showModeSelection(): void {
+		const centerX = this.scale.width / 2
+		const centerY = this.scale.height / 2
+
+		// Create a semi-transparent overlay
+		const overlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x000000, 0.85)
+		overlay.setOrigin(0, 0)
+		overlay.setDepth(100)
+
+		// Create container for mode selection UI
+		const modeContainer = this.add.container(0, 0)
+		modeContainer.setDepth(101)
+
+		// Title
+		const title = this.add.text(centerX, centerY - 180, 'SELECT GAME MODE', {
+			fontSize: '48px',
+			color: '#00d4ff',
+			fontFamily: 'Arial, sans-serif',
+			fontStyle: 'bold',
+			resolution: 2
+		})
+		title.setOrigin(0.5)
+		title.setStroke('#001a33', 6)
+		modeContainer.add(title)
+
+		// Mode buttons configuration
+		const modes = [
+			{
+				id: 'quick-defense' as const,
+				name: 'Quick Defense',
+				description: 'Jump straight into action!\nDefend your base in a fast-paced battle.',
+				yOffset: -40
+			},
+			{
+				id: 'campaign' as const,
+				name: 'Campaign Mode',
+				description: 'Embark on an epic journey!\nMore features coming soon.',
+				yOffset: 80
+			}
+		]
+
+		modes.forEach((mode) => {
+			const buttonY = centerY + mode.yOffset
+			const buttonWidth = 400
+			const buttonHeight = 90
+
+			// Button background
+			const buttonBg = this.add.rectangle(centerX, buttonY, buttonWidth, buttonHeight, 0x00d4ff, 0.2)
+			buttonBg.setStrokeStyle(3, 0x00d4ff)
+			buttonBg.setInteractive({ useHandCursor: true })
+			modeContainer.add(buttonBg)
+
+			// Button title
+			const buttonTitle = this.add.text(centerX, buttonY - 20, mode.name, {
+				fontSize: '28px',
+				color: '#00d4ff',
+				fontFamily: 'Arial, sans-serif',
+				fontStyle: 'bold',
+				resolution: 2
+			})
+			buttonTitle.setOrigin(0.5)
+			modeContainer.add(buttonTitle)
+
+			// Button description
+			const buttonDesc = this.add.text(centerX, buttonY + 15, mode.description, {
+				fontSize: '14px',
+				color: '#88ccff',
+				fontFamily: 'Arial, sans-serif',
+				align: 'center',
+				resolution: 2
+			})
+			buttonDesc.setOrigin(0.5)
+			modeContainer.add(buttonDesc)
+
+			// Hover effects
+			buttonBg.on('pointerover', () => {
+				buttonBg.setFillStyle(0x00d4ff, 0.4)
+				buttonTitle.setColor('#ffffff')
+				buttonDesc.setColor('#ffffff')
+				this.tweens.add({
+					targets: [buttonBg, buttonTitle, buttonDesc],
+					scale: 1.05,
+					duration: 200,
+					ease: 'Power2'
+				})
+			})
+
+			buttonBg.on('pointerout', () => {
+				buttonBg.setFillStyle(0x00d4ff, 0.2)
+				buttonTitle.setColor('#00d4ff')
+				buttonDesc.setColor('#88ccff')
+				this.tweens.add({
+					targets: [buttonBg, buttonTitle, buttonDesc],
+					scale: 1,
+					duration: 200,
+					ease: 'Power2'
+				})
+			})
+
+			// Click handler
+			buttonBg.on('pointerdown', () => {
+				this.selectGameMode(mode.id, overlay, modeContainer)
+			})
+		})
+
+		// Back button
+		const backButtonY = centerY + 180
+		const backButton = this.add.text(centerX, backButtonY, '< Back', {
+			fontSize: '20px',
+			color: '#666666',
+			fontFamily: 'Arial, sans-serif',
+			resolution: 2
+		})
+		backButton.setOrigin(0.5)
+		backButton.setInteractive({ useHandCursor: true })
+		modeContainer.add(backButton)
+
+		backButton.on('pointerover', () => {
+			backButton.setColor('#00d4ff')
+		})
+
+		backButton.on('pointerout', () => {
+			backButton.setColor('#666666')
+		})
+
+		backButton.on('pointerdown', () => {
+			// Fade out and destroy the mode selection UI
+			this.tweens.add({
+				targets: [overlay, modeContainer],
+				alpha: 0,
+				duration: 300,
+				onComplete: () => {
+					overlay.destroy()
+					modeContainer.destroy()
+				}
+			})
+		})
+
+		// Entrance animation
+		overlay.setAlpha(0)
+		modeContainer.setAlpha(0)
+
+		this.tweens.add({
+			targets: [overlay, modeContainer],
+			alpha: 1,
+			duration: 300,
+			ease: 'Power2'
+		})
+	}
+
+	private selectGameMode(mode: 'quick-defense' | 'campaign', overlay: Phaser.GameObjects.Rectangle, container: Phaser.GameObjects.Container): void {
+		// Store the selected mode
+		console.log('🎮 Setting game mode to:', mode)
+		this.gameConfigService.setGameMode(mode)
+		console.log('🎮 Game mode confirmed:', this.gameConfigService.getGameMode())
+
 		// Play funny start sound!
 		this.playStartSound()
 
@@ -399,6 +559,13 @@ export class StartScene extends Phaser.Scene {
 			this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, this.audioContext.currentTime)
 			this.musicGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.5)
 		}
+
+		// Fade out the mode selection UI
+		this.tweens.add({
+			targets: [overlay, container],
+			alpha: 0,
+			duration: 300
+		})
 
 		// Fade out effect
 		this.cameras.main.fadeOut(500, 0, 0, 0)

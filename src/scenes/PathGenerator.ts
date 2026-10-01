@@ -150,25 +150,23 @@ export class PathGenerator {
         // Now build path from left to right, ensuring all segments are horizontal or vertical
         const waypoints: Phaser.Math.Vector2[] = [];
 
-        // Start point - can be from left edge, top, or bottom in first third of map
-        const firstThirdX = mapWidth / 3;
-        let startX: number;
+        // Start point - always from the left edge of the map
         let startY: number;
         
         // Determine starting edge based on path index
         const startEdge = this.determineStartEdge(pathIndex, totalPaths);
         
+        // Always start from the left edge (x = 0)
+        const startX = 0;
+        
         if (startEdge === 'top') {
-            // Start from top edge within first third
-            startX = Phaser.Math.Between(this.margin, firstThirdX);
+            // Start from left edge at top of safe area
             startY = minY;
         } else if (startEdge === 'bottom') {
-            // Start from bottom edge within first third
-            startX = Phaser.Math.Between(this.margin, firstThirdX);
+            // Start from left edge at bottom of safe area
             startY = maxY;
         } else {
-            // Start from left edge
-            startX = 0;
+            // Start from left edge with varied Y position
             if (totalPaths === 1) {
                 // Single path: random starting Y
                 startY = Phaser.Math.Between(minY, maxY);
@@ -188,8 +186,8 @@ export class PathGenerator {
         waypoints.push(new Phaser.Math.Vector2(currentX, currentY));
 
         // Alternate between horizontal and vertical movements
-        // If starting from top or bottom edge, first movement should be vertical to enter play area
-        let isHorizontal = startEdge === 'left'; // Start horizontal only from left edge
+        // Since all paths now start from left edge, first movement should always be horizontal
+        let isHorizontal = true; // Always start with horizontal movement from left edge
         let turnsRemaining = numberOfTurningPoints;
 
         // Define strict separated zones for each path
